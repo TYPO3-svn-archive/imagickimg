@@ -1,0 +1,2 @@
+# cat=basic; type=options[POINT,BOX,TRIANGLE,HERMITE,HANNING,HAMMING,BLACKMAN,GAUSSIAN,QUADRATIC,CUBIC,CATROM,MITCHELL,LANCZOS,BESSEL,SINC]; label=Windowing Filter for resizing, resampling etc images
+windowingFilter = CATROM
