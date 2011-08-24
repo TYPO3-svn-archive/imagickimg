@@ -88,6 +88,8 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 
 				if (!file_exists($this->output))	{
 					$this->errorGif('No thumb','generated!',basename($this->input));
+				} else {
+					t3lib_div::fixPermissions($this->output);
 				}
 			}
 				// The thumbnail is read and output to the browser
