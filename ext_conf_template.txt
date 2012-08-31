@@ -1,2 +1,5 @@
 # cat=basic; type=options[POINT,BOX,TRIANGLE,HERMITE,HANNING,HAMMING,BLACKMAN,GAUSSIAN,QUADRATIC,CUBIC,CATROM,MITCHELL,LANCZOS,BESSEL,SINC]; label=Windowing Filter for resizing, resampling etc images
 windowingFilter = CATROM
+
+# cat=basic; type=int [0-300]; label= Image resolution in DPI: Enter a number of DPI that Imagick will produce. Most komputer monitors use 72 dpi so it is a default value. This value has and impact to the images sizes. Set to 0 if you want to use original images resolution.
+imagesDPI = 72

@@ -30,6 +30,22 @@
  
 class ux_t3lib_stdGraphic extends t3lib_stdGraphic	{
 
+	private $imagick_loaded = true;
+	
+	function init()	{
+		parent::init();
+		
+		if (!extension_loaded('imagick')) {
+			
+			$this->imagick_loaded = false;			
+			t3lib_div::sysLog(
+				'PHP extension Imagick is not loaded. Extension Imagickimg is deactivated.', 
+				'imagickimg', 
+				t3lib_div::SYSLOG_SEVERITY_WARNING
+			);
+			
+		}
+	}
 
 	/***********************************
 	 *
@@ -54,11 +70,11 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic	{
 
 	function imageMagickConvert($imagefile, $newExt = '', $w = '', $h = '', $params = '', $frame = '', $options = '', $mustCreate = 0)	{
 
-    if (!$this->NO_IMAGE_MAGICK) {	
-      return parent::imageMagickConvert($imagefile, $newExt, $w, $h, $params, $frame, $options, $mustCreate);
-    }  
-    
-		if($info = $this->getImageDimensions($imagefile))	{
+		if (!$this->NO_IMAGE_MAGICK) {	
+			return parent::imageMagickConvert($imagefile, $newExt, $w, $h, $params, $frame, $options, $mustCreate);
+		}
+   
+		if($info = $this->getImageDimensions($imagefile)) {
 			$newExt = strtolower(trim($newExt));
 			if (!$newExt)	{	// If no extension is given the original extension is used
 				$newExt = $info[2];
@@ -122,34 +138,73 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic	{
 				$this->createTempSubDir('pics/');
 				$output = $this->absPrefix.$this->tempPath.'pics/'.$this->filenamePrefix.$theOutputName.'.'.$newExt;
 
+				$fullOutput = '';
+				if (TYPO3_OS === 'WIN' ) {
+					$imagefile = $this->wrapFileName(realpath($imagefile));
+					$fullOutput = $this->wrapFileName(PATH_site . $output);
+				}
+				
 					// Register temporary filename:
 				$GLOBALS['TEMP_IMAGES_ON_PAGE'][] = $output;
 
 				if ($this->dontCheckForExistingTempFile || !$this->file_exists_typo3temp_file($output, $imagefile))	{
-					$newIm = new Imagick($imagefile);
-					$newIm->resizeImage($info[0], $info[1], $GLOBALS['TYPO3_CONF_VARS']['GFX']['windowing_filter'], 1);
-
-					switch($newExt) {
-//					  case 'gif':
-//					    if($gfxConf['gif_compress']) {
-//								$newIm->setImageCompression(Imagick::COMPRESSION_LZW);
-//								$newIm->setImageCompressionQuality(100);
-//					    }
-//					  	break;
-						case 'jpg':
-						case 'jpeg':
-							$newIm->setImageCompression(Imagick::COMPRESSION_JPEG);
-							$newIm->setImageCompressionQuality($this->jpegQuality);
-							break;
-					}
 					
-					$newIm->writeImage($output);
-					$newIm->destroy();
+					$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
+					$imgDPI = intval($gfxConf['imagesDPI']);
+					
+					try {
+						$newIm = new Imagick($imagefile);
+						if (intval($gfxConf['imagesDPI']) > 0)
+							$newIm->setImageResolution($imgDPI, $imgDPI);
+
+						if ($gfxConf['im_useStripProfileByDefault'])
+							$newIm->stripImage();
+
+						$newIm->resizeImage($info[0], $info[1], $gfxConf['windowing_filter'], 1);
+
+						switch($newExt) {
+							case 'gif':
+								if (!$gfxConf['gif_compress']) {
+									$newIm->setImageCompression(Imagick::COMPRESSION_LZW);
+									$newIm->setImageCompressionQuality($this->jpegQuality);
+								}
+								break;
+								
+							case 'jpg':
+							case 'jpeg':
+								if ($this->jpegQuality == 100)
+									$newIm->setImageCompression(Imagick::COMPRESSION_LOSSLESSJPEG);
+								else
+									$newIm->setImageCompression(Imagick::COMPRESSION_JPEG);
+								$newIm->setImageCompressionQuality($this->jpegQuality);
+								break;
+
+							case 'tif':
+							case 'tiff':
+								$newIm->setImageCompression(Imagick::COMPRESSION_LZW);
+								$newIm->setImageCompressionQuality($this->jpegQuality);
+								break;
+						}
+						
+						if (TYPO3_OS === 'WIN')
+							$newIm->writeImage($fullOutput);
+						else
+							$newIm->writeImage($output);
+						$newIm->destroy();
+
+						if (TYPO3_DLOG)
+							t3lib_div::devLog('ux_t3lib_stdGraphic->imageMagickConvert', 'imagickimg', -1);
+						
+					} catch(ImagickException $e) {
+						
+						t3lib_div::sysLog('ux_t3lib_stdGraphic->imageMagickConvert' . $e->getMessage(), 'imagickimg', t3lib_div::SYSLOG_SEVERITY_ERROR);
+					}
 				}
 				if (file_exists($output))	{
 					$info[3] = $output;
 					$info[2] = $newExt;
-					if ($params)	{	// params could realisticly change some imagedata!
+						// params could realisticly change some imagedata!
+					if ($params) {
 						$info=$this->getImageDimensions($info[3]);
 					}
 					return $info;
@@ -157,5 +212,47 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic	{
 			}
 		}
 	}
+
+	/**
+	 * Returns an array where [0]/[1] is w/h, [2] is extension and [3] is the filename.
+	 * Using ImageMagick
+	 *
+	 * @param	string		The relative (to PATH_site) image filepath
+	 * @return	array
+	 */	 
+	function imageMagickIdentify($imagefile) {
+		
+		if (!$this->NO_IMAGE_MAGICK && $this->imagick_loaded) {
+		
+			if (TYPO3_OS === 'WIN' )
+				$file = $this->wrapFileName(PATH_site . $imagefile);
+			else
+				$file = $this->wrapFileName($imagefile);
+			
+			try {
+				$newIm = new Imagick($file);
+				$idArr = $newIm->identifyImage(false);
+				
+				$arRes = array();
+				$arRes[0] = $idArr['geometry']['width'];
+				$arRes[1] = $idArr['geometry']['height'];
+				$arRes[2] = strtolower(pathinfo($idArr['imageName'], PATHINFO_EXTENSION));
+				$arRes[3] = $imagefile;		
+
+				$newIm->destroy();
+
+				if (TYPO3_DLOG) 
+					t3lib_div::devLog('ux_t3lib_stdGraphic->imageMagickIdentify', 'imagickimg', -1, $arRes);
+
+			} catch(ImagickException $e) {
+				
+				t3lib_div::sysLog('ux_t3lib_stdGraphic->imageMagickIdentify' . $e->getMessage(), 'imagickimg', t3lib_div::SYSLOG_SEVERITY_ERROR);
+			}
+				
+			return $arRes;
+		}
+	}
+
+
 }
 ?>

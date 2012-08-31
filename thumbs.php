@@ -41,7 +41,7 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 
 		if ($TYPO3_CONF_VARS['GFX']['im']) {
 		  return parent::main();
-		}		
+		}
 
 			// If file exists, we make a thumbsnail of the file.
 		if ($this->input && file_exists($this->input))	{
@@ -80,12 +80,35 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 			$this->output = $outpath.$outfile;
 
 				// If thumbnail does not exist, we generate it
-			if (!file_exists($this->output))	{
-				$newIm = new Imagick($this->input);
-				$newIm->sampleImage($sizeParts[0], $sizeParts[1]);
-				$newIm->writeImage($this->output);
-				$newIm->destroy();				
+			if (!file_exists($this->output)) {
+			
+					// Load extension configuration
+				$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
+				$imgDPI = intval($gfxConf['imagesDPI']);
+				
+				try {
+					$newIm = new Imagick($this->input);
+					if ($imgDPI > 0)
+						$newIm->setImageResolution($imgDPI, $imgDPI);
 
+					if ($gfxConf['im_useStripProfileByDefault']) {
+						$newIm->stripImage();
+					}
+					$newIm->sampleImage($sizeParts[0], $sizeParts[1]);
+					$newIm->writeImage($this->output);
+					if (TYPO3_DLOG) {
+						t3lib_div::devLog('Thumb created', 'imagickimg', 0, array('name' => $this->output));
+					}
+					$newIm->destroy();
+
+					if (TYPO3_DLOG) 
+						t3lib_div::devLog('ux_SC_t3lib_thumbs->main', 'imagickimg', -1, $arRes);
+
+					} catch(ImagickException $e) {
+						
+						t3lib_div::sysLog('ux_SC_t3lib_thumbs->main' . $e->getMessage(), 'imagickimg', t3lib_div::SYSLOG_SEVERITY_ERROR);
+					}
+					
 				if (!file_exists($this->output))	{
 					$this->errorGif('No thumb','generated!',basename($this->input));
 				} else {
