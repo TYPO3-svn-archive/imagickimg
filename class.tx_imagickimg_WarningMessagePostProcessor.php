@@ -21,14 +21,10 @@
 *
 *  This copyright notice MUST APPEAR in all copies of the script!
 ***************************************************************/
-
-
 /**
  * Post processes the warning messages found in about modules.
  *
  * @author	Tomasz Krawczyk <tomasz@typo3.pl>
- * @package TYPO3
- * @subpackage reports
  */
 class tx_imagickimg_WarningMessagePostProcessor {
 
