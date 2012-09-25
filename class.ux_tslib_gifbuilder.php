@@ -248,7 +248,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 						$newIm = new Imagick($imagefile);
 						$newIm->resizeImage($info[0], $info[1], $gfxConf['windowing_filter'], 1);
 
-						$this->imagickOptimize($newIm);
+						//$this->imagickOptimize($newIm);
 						
 						if (TYPO3_OS === 'WIN')
 							$newIm->writeImage($fullOutput);
@@ -393,7 +393,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 			$baseObj->compositeImage($overObj, Imagick::COMPOSITE_MULTIPLY, 0, 0); //COMPOSITE_MULTIPLY
 			$baseObj->setImageMatte(FALSE); // IM >= 6.2.9
 			
-			$this->imagickOptimize($baseObj);
+			//$this->imagickOptimize($baseObj);
 
 			$baseObj->writeImage($fileOutput);
 
@@ -406,7 +406,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->combineExec():  >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->combineExec() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 		
 		return '';
@@ -586,7 +586,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 			}
 			catch(ImagickException $e) {
 				
-				t3lib_div::sysLog('ux_tslib_gifBuilder->IMreduceColors():  >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+				t3lib_div::sysLog('ux_tslib_gifBuilder->IMreduceColors() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			}			
 		}
 		return '';
@@ -819,7 +819,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickGamma(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickGamma() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}		
 	}
 	
@@ -847,7 +847,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickBlur(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickBlur() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}		
 	}
 	
@@ -875,7 +875,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSharpen(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSharpen() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -903,7 +903,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickRotate(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickRotate() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -931,7 +931,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSolarize(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSolarize() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -959,7 +959,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSwirl(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSwirl() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -987,7 +987,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickWawe(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickWawe() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1015,7 +1015,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickCharcoal(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickCharcoal() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1026,12 +1026,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		else
 			$fileResult = $result;
 			
+		$fI = t3lib_div::split_fileref($file);
+		$ext = strtolower($fI['fileext']);
+			
 		try {
 			$newIm = new Imagick();
 			$newIm->readImage($fileResult);
-		
-			$newIm->setImageColorspace(imagick::COLORSPACE_GRAY);
-		
+
+			//$newIm->setImageColorspace(Imagick::COLORSPACE_GRAY);
+			$newIm->setImageType(Imagick::IMGTYPE_GRAYSCALE);
+			
 			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
@@ -1043,7 +1047,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickGray(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickGray() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1071,11 +1075,11 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickEdge(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickEdge() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
-	private function imagickEmbross($file) {
+	private function imagickEmboss($file) {
 	
 		if (TYPO3_OS === 'WIN')
 			$fileResult = PATH_site . $file;
@@ -1099,7 +1103,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickEmbross(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickEmbross() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1127,7 +1131,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickFlip(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickFlip() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1155,7 +1159,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickFlop(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickFlop() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1185,7 +1189,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickColors(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickColors() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1213,7 +1217,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickShear(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickShear() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1241,7 +1245,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickInvert(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickInvert() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1269,7 +1273,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickNormalize(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickNormalize() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -1299,10 +1303,9 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickNormalize(): >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickNormalize() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
-
 	
     /**
      * Wraper function for compatibility with versions older than 4.6.
@@ -1324,5 +1327,69 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		
 		return $res;
 	}
+
+    /**
+     * Returns an array with detailed image info.
+     *
+     * @param 	string	File path
+	 * @return	array	Image information
+     */
+	public function imagickGetDetailedImageInfo($imagefile) {
+		
+		if (TYPO3_OS === 'WIN')
+			$file = $this->wrapFileName(PATH_site . $imagefile);
+		else
+			$file = $imagefile;
+
+		try {
+			$im = new Imagick();
+			$im->readImage($file);
+			$identify = $im->identifyImage();
+
+			$res = array(
+				'Basic image properties' => array(
+					'Image geometry: ' => $identify['geometry']['width'] . 'x' . $identify['geometry']['height'],
+					'Image format: ' => $identify['format'],
+					'Image type: ' => $identify['type'],
+					'Colorspace: ' => $identify['colorSpace'],
+					'Units: ' => $identify['units'],
+					'Compression: ' => $identify['compression']
+				)
+			);
+			if (!empty($identify['resolution']['x'])) {
+			
+				$res['Basic image properties'] = array_merge($res['Basic image properties'], 
+					array(
+						'Resolution: ' => $identify['resolution']['x'] . 'x' . $identify['resolution']['y'] . ' dpi'
+					)
+				);
+			}
+
+			$res['All image properties'] = array();
+			foreach ( $im->getImageProperties() as $k => $v )
+			{
+				$res['All image properties'] = array_merge($res['All image properties'], array($k => $v));
+			}
+
+			$res['All image profiles'] = array();
+			foreach ( $im->getImageProfiles() as $k => $v )
+			{
+				$res['Profile name'] = array_merge($res['Profile name'], array($k => '(size: ' . strlen( $v ) . ')'));
+			}
+
+			if (TYPO3_DLOG)
+				t3lib_div::devLog('ux_tslib_gifBuilder->imagickGetDetailedImageInfo', $this->extKey, -1);
+			
+			$im->destroy();
+
+			return $res;				
+		}
+		catch(ImagickException $e) {
+			
+			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickGetDetailedImageInfo() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+		}
+	}
+
+
 }
 ?>
