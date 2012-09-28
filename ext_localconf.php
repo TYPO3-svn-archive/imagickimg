@@ -10,10 +10,11 @@ $TYPO3_CONF_VARS['GFX']['thumbnails'] = 0;
 $TYPO3_CONF_VARS['FE']['XCLASS']['tslib/class.tslib_gifbuilder.php']=t3lib_extMgm::extPath($_EXTKEY).'class.ux_tslib_gifbuilder.php';
 $TYPO3_CONF_VARS['BE']['XCLASS']['t3lib/class.t3lib_stdgraphic.php']=t3lib_extMgm::extPath($_EXTKEY).'class.ux_t3lib_stdgraphic.php';
 $TYPO3_CONF_VARS['BE']['XCLASS']['t3lib/thumbs.php']=t3lib_extMgm::extPath($_EXTKEY).'thumbs.php';
+$TYPO3_CONF_VARS['BE']['XCLASS']['typo3/show_item.php']=t3lib_extMgm::extPath($_EXTKEY).'class.ux_SC_show_item.php';
+$TYPO3_CONF_VARS['FE']['XCLASS']['tslib/class.tslib_content.php'] = t3lib_extMgm::extPath($_EXTKEY) . 'class.ux_tslib_content.php';
 
 // Add a hook to show Backend warnings
-$TYPO3_CONF_VARS['SC_OPTIONS']['t3lib/class.t3lib_befunc.php']['displayWarningMessages'][$_EXTKEY] = 'EXT:' . $_EXTKEY . '/class.tx_imagickimg_WarningMessagePostProcessor.php:tx_imagickimg_WarningMessagePostProcessor';
-
+$TYPO3_CONF_VARS['SC_OPTIONS']['t3lib/class.t3lib_befunc.php']['displayWarningMessages'][$_EXTKEY] = t3lib_extMgm::extPath($_EXTKEY) . 'class.tx_imagickimg_WarningMessagePostProcessor.php:tx_imagickimg_WarningMessagePostProcessor';
 
 $_EXTCONF = unserialize($_EXTCONF);	// unserializing the configuration
 
@@ -82,5 +83,6 @@ if (extension_loaded('imagick')) {
 		
 	$TYPO3_CONF_VARS['GFX']['windowing_filter'] = $wF;
 	$TYPO3_CONF_VARS['GFX']['imagesDPI'] = $_EXTCONF['imagesDPI'];
+	$TYPO3_CONF_VARS['GFX']['thumbnailingMethod'] = $_EXTCONF['thumbnailingMethod'];
 }
 ?>

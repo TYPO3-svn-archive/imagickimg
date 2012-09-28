@@ -2,7 +2,7 @@
 /***************************************************************
 *  Copyright notice
 *
-*  (c) 2010-2011 Radu Dumbrăveanu <vundicind@gmail.com>
+*  (c) 2010-2012 Radu Dumbrăveanu <vundicind@gmail.com>
 *  All rights reserved
 *
 *  This script is part of the TYPO3 project. The TYPO3 project is
@@ -26,6 +26,7 @@
 ***************************************************************/
 /**
  * @author	Radu Dumbrăveanu <vundicind@gmail.com>
+ * @author	Tomasz Krawczyk <tomasz@typo3.pl>
  */ 
  
 class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
@@ -38,8 +39,10 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 	 */
 	function main()	{
 		global $TYPO3_CONF_VARS;
+		
+		$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
 
-		if ($TYPO3_CONF_VARS['GFX']['im']) {
+		if ($gfxConf['im']) {
 		  return parent::main();
 		}
 
@@ -64,16 +67,18 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 
 				// I added extra check, so that the size input option could not be fooled to pass other values. That means the value is exploded, evaluated to an integer and the imploded to [value]x[value]. Furthermore you can specify: size=340 and it'll be translated to 340x340.
 			$sizeParts = explode('x', $this->size.'x'.$this->size);	// explodes the input size (and if no "x" is found this will add size again so it is the same for both dimensions)
-			if (version_compare(TYPO3_version, '4.6.0', '>='))
+			if (version_compare(TYPO3_version, '4.6.0', '>=')) {
 				$sizeParts = array(
 					t3lib_utility_Math::forceIntegerInRange($sizeParts[0],1,1000),
 					t3lib_utility_Math::forceIntegerInRange($sizeParts[1],1,1000)
 				);	// Cleaning it up, only two parameters now.
-			else
+			}
+			else {
 				$sizeParts = array(
 					t3lib_div::intInRange($sizeParts[0],1,1000),
 					t3lib_div::intInRange($sizeParts[1],1,1000)
 				);	// Cleaning it up, only two parameters now.
+			}
 			$this->size = implode('x',$sizeParts);		// Imploding the cleaned size-value back to the internal variable
 			$sizeMax = max($sizeParts);	// Getting max value
 
@@ -82,10 +87,12 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 
 				// Should be - ? 'png' : 'gif' - , but doesn't work (ImageMagick prob.?)
 				// René: png work for me
-			if (version_compare(TYPO3_version, '4.6.0', '>='))
-				$thmMode = t3lib_utility_Math::forceIntegerInRange($TYPO3_CONF_VARS['GFX']['thumbnails_png'],0);
-			else
-				$thmMode = t3lib_div::intInRange($TYPO3_CONF_VARS['GFX']['thumbnails_png'],0);
+			if (version_compare(TYPO3_version, '4.6.0', '>=')) {
+				$thmMode = t3lib_utility_Math::forceIntegerInRange($gfxConf['thumbnails_png'],0);
+			}
+			else {
+				$thmMode = t3lib_div::intInRange($gfxConf['thumbnails_png'],0);
+			}
 			$outext = ($ext!='jpg' || ($thmMode & 2)) ? ($thmMode & 1 ? 'png' : 'gif') : 'jpg';
 
 			$outfile = 'tmb_'.substr(md5($this->input.$this->mtime.$this->size),0,10).'.'.$outext;
@@ -94,8 +101,6 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 				// If thumbnail does not exist, we generate it
 			if (!file_exists($this->output)) {
 			
-					// Load extension configuration
-				$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
 				$imgDPI = intval($gfxConf['imagesDPI']);
 				
 				try {
@@ -106,15 +111,27 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 					if ($gfxConf['im_useStripProfileByDefault']) {
 						$newIm->stripImage();
 					}
-					$newIm->sampleImage($sizeParts[0], $sizeParts[1]);
-					$newIm->writeImage($this->output);
-					if (TYPO3_DLOG) {
-						t3lib_div::devLog('Thumb created', 'imagickimg', 0, array('name' => $this->output));
+					
+					switch($gfxConf['thumbnailingMethod']) {
+						case 'CROPPED':
+							$this->imagickThumbCropped($newIm, $sizeParts[0], $sizeParts[1]);
+							break;
+							
+						case 'SAMPLED':
+							$this->imagickThumbSampled($newIm, $sizeParts[0], $sizeParts[1]);
+							break;
+							
+						default:
+							$this->imagickThumbProportional($newIm, $sizeParts[0], $sizeParts[1]);
+							break;							
 					}
+					
+					$newIm->writeImage($this->output);
+					
 					$newIm->destroy();
 
 					if (TYPO3_DLOG) 
-						t3lib_div::devLog('ux_SC_t3lib_thumbs->main', 'imagickimg', -1, $arRes);
+						t3lib_div::devLog('ux_SC_t3lib_thumbs->main', 'imagickimg', -1);
 
 					} catch(ImagickException $e) {
 						
@@ -138,6 +155,30 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 		} else {
 			$this->errorGif('No valid','inputfile!',basename($this->input));
 		}
-	}  
+	}
+	
+	private function imagickThumbProportional(&$imObj, $w, $h) {
+	
+		// Resizes to whichever is larger, width or height
+		if ($imObj->getImageHeight() <= $imObj->getImageWidth()) {
+			// Resize image using the lanczos resampling algorithm based on width
+			$imObj->resizeImage($w, 0, Imagick::FILTER_LANCZOS, 1);
+		}
+		else {
+			// Resize image using the lanczos resampling algorithm based on height
+			$imObj->resizeImage(0, $h, Imagick::FILTER_LANCZOS, 1);
+		}
+	}
+
+	private function imagickThumbCropped(&$imObj, $w, $h) {
+	
+		$imObj->cropThumbnailImage($w, $h);
+	}
+
+	private function imagickThumbSampled(&$imObj, $w, $h) {
+	
+		$imObj->sampleImage($w, $h);
+	}
+	
 }
 ?>

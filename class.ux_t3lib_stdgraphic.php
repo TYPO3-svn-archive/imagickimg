@@ -33,6 +33,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 
 	private $NO_IMAGICK = 0;
 	private $extKey = 'imagickimg';
+	private $quantumRange = -1;
 	
 	/**
 	 * Init function. Must always call this when using the class.
@@ -44,6 +45,9 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 */
 	function init()	{
 	
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->init', $this->extKey, -1);
+
 		if (!extension_loaded('imagick')) {
 			
 			$this->NO_IMAGICK = 1;
@@ -68,9 +72,6 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 				$TYPO3_CONF_VARS['GFX']['im_v5effects'] = 0;
 			}
 		}
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_t3lib_stdGraphic->init', $this->extKey, -1);
-
 		parent::init();
 	}
 	
@@ -86,6 +87,9 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		if ($this->NO_IMAGICK)
 			return '';
 
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->getIMversion', $this->extKey, -1);
+			
 		$im_ver = '';
 		try {
 			$im = new Imagick();
@@ -113,16 +117,38 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imageMagickConvert >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->getIMversion >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
-
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_t3lib_stdGraphic->getIMversion', $this->extKey, 0, array($im_ver));
 
 		return $im_ver;
 	}
 
 
+	private function getQuantumRangeLong() {
+
+		if ($this->NO_IMAGICK)
+			return;
+	
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->getQuantumRangeLong', $this->extKey, -1);			
+
+		try {
+			$newIm = new Imagick();
+
+			$qrArr = $newIm->getQuantumRange();
+			if (is_array($qrArr))
+				$this->quantumRange = intval($qrArr['quantumRangeLong']);
+			else
+				$this->quantumRange = 0;
+
+			$newIm->destroy();
+		}
+		catch(ImagickException $e) {
+			
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->getQuantumRangeLong >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+		}
+	}
+	
 	/**
 	 * Converts $imagefile to another file in temp-dir of type $newExt (extension).
 	 *
@@ -137,12 +163,14 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @return	array		[0]/[1] is w/h, [2] is file extension and [3] is the filename.
 	 * @see getImageScale(), typo3/show_item.php, fileList_ext::renderImage(), tslib_cObj::getImgResource(), SC_tslib_showpic::show(), maskImageOntoImage(), copyImageOntoImage(), scale()
 	 */
-
 	function imageMagickConvert($imagefile, $newExt = '', $w = '', $h = '', $params = '', $frame = '', $options = '', $mustCreate = 0)	{
 
 		if ($this->NO_IMAGICK) {
 			return parent::imageMagickConvert($imagefile, $newExt, $w, $h, $params, $frame, $options, $mustCreate);
 		}
+
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imageMagickConvert', $this->extKey, -1);	
 
 		if($info = $this->getImageDimensions($imagefile))	{
 			$newExt = strtolower(trim($newExt));
@@ -208,15 +236,10 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 					$offsetX = intval(($data[0] - $data['origW']) * ($data['cropH'] + 100) / 200);
 					$offsetY = intval(($data[1] - $data['origH']) * ($data['cropV'] + 100) / 200);
 					$params .= ' -crop ' . $data['origW'] . 'x' . $data['origH'] . '+' . $offsetX . '+' . $offsetY . ' ';
-					//var_dump('params', $params);
 				}
 
 				$command = $this->scalecmd . ' ' . $info[0] . 'x' . $info[1] . '! ' . $params . ' ';
 				$cropscale = ($data['crs'] ? 'crs-V' . $data['cropV'] . 'H' . $data['cropH'] : '');
-
-				if (TYPO3_DLOG)
-					t3lib_div::devLog('ux_t3lib_stdGraphic->imageMagickConvert', $this->extKey, 0, 
-						array($imagefile, $params, $command, $cropscale));
 
 				if ($this->alternativeOutputKey)	{
 					$theOutputName = t3lib_div::shortMD5($command.$cropscale.basename($imagefile).$this->alternativeOutputKey.'['.$frame.']');
@@ -232,11 +255,14 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 				$this->createTempSubDir('pics/');
 				$output = $this->absPrefix.$this->tempPath.'pics/'.$this->filenamePrefix.$theOutputName.'.'.$newExt;
 
+				if (!t3lib_div::isAbsPath($imagefile))
+					$imagefile = t3lib_div::getFileAbsFileName($imagefile, FALSE);
+
 				$fullOutput = '';
-				if (TYPO3_OS === 'WIN' ) {
-					$imagefile = realpath($imagefile);
-					$fullOutput = PATH_site . $output;
-				}
+				if (!t3lib_div::isAbsPath($output))
+					$fullOutput = t3lib_div::getFileAbsFileName($output, FALSE);
+				else
+					$fullOutput = $output;
 				
 					// Register temporary filename:
 				$GLOBALS['TEMP_IMAGES_ON_PAGE'][] = $output;
@@ -249,21 +275,15 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 						$newIm = new Imagick($imagefile);
 						$newIm->resizeImage($info[0], $info[1], $gfxConf['windowing_filter'], 1);
 
-						//$this->imagickOptimize($newIm);
-						
-						if (TYPO3_OS === 'WIN')
-							$newIm->writeImage($fullOutput);
-						else
-							$newIm->writeImage($output);
+						$newIm->writeImage($fullOutput);
 						$newIm->destroy();
 						
 							// apply additional params (f.e. effects, compression)
 						if ($params) {
 							$this->applyImagickEffect($output, $params);
 						}
-						
-						if (TYPO3_DLOG)
-							t3lib_div::devLog('ux_t3lib_stdGraphic->imageMagickConvert', $this->extKey, -1);	
+							// Optimize image
+						$this->imagickOptimize($fullOutput);
 					}
 					catch(ImagickException $e) {
 						
@@ -295,9 +315,15 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		if ($this->NO_IMAGICK) {
 			return parent::imageMagickIdentify($imagefile);
 		}
+
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imageMagickIdentify', $this->extKey, 0, $arRes);
 		
 		// BE uses stdGraphics and absolute paths.
-		$file = $imagefile;
+		if (!t3lib_div::isAbsPath($imagefile))
+			$file = t3lib_div::getFileAbsFileName($imagefile, FALSE);
+		else
+			$file = $imagefile;
 
 		try {
 			$newIm = new Imagick($file);
@@ -311,9 +337,6 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			$arRes[3] = $imagefile;		
 
 			$newIm->destroy();
-
-			if (TYPO3_DLOG) 
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imageMagickIdentify', $this->extKey, 0, $arRes);
 		}
 		catch(ImagickException $e) {
 			
@@ -339,17 +362,28 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			return parent::combineExec($input, $overlay, $mask, $output, $handleNegation);
 		}
 		
-		if (TYPO3_OS === 'WIN' ) {
-			$fileInput = PATH_site . $input;
-			$fileOver = PATH_site . $overlay;
-			$fileMask = PATH_site . $mask;
-			$fileOutput = PATH_site . $output;
-		} else {
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->combineExec', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($input))
+			$fileInput = t3lib_div::getFileAbsFileName($input, FALSE);
+		else 
 			$fileInput = $input;
+
+		if (!t3lib_div::isAbsPath($overlay))
+			$fileOver = t3lib_div::getFileAbsFileName($overlay, FALSE);
+		else 
 			$fileOver = $overlay;
+			
+		if (!t3lib_div::isAbsPath($mask))
+			$fileMask = t3lib_div::getFileAbsFileName($mask, FALSE);
+		else 
 			$fileMask = $mask;
+
+		if (!t3lib_div::isAbsPath($output))
+			$fileOutput = t3lib_div::getFileAbsFileName($output, FALSE);
+		else 
 			$fileOutput = $output;
-		}
 		
 		try {
 			$baseObj = new Imagick();
@@ -390,7 +424,6 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			$baseObj->compositeImage($overObj, Imagick::COMPOSITE_MULTIPLY, 0, 0); //COMPOSITE_MULTIPLY
 			$baseObj->setImageMatte(FALSE); // IM >= 6.2.9
 			
-			//$this->imagickOptimize($baseObj);
 
 			$baseObj->writeImage($fileOutput);
 
@@ -398,12 +431,12 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			$overObj->destroy();
 			$baseObj->destroy();
 
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->combineExec', $this->extKey, -1);
+				// Optimize image
+			$this->imagickOptimize($fileOutput);
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->combineExec() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->combineExec >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 		
 		return '';
@@ -417,9 +450,11 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @return	void
      */
 	private function imagickCompress(&$imageObj) {
+
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickCompress', $this->extKey, -1);
 	
-		$imgExt = strtolower($imageObj->getImageFormat());
-		
+		$imgExt = strtolower($imageObj->getImageFormat());		
 		switch($imgExt) {
 			
 			case 'gif':
@@ -451,10 +486,12 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 					$imageObj->setImageCompression(imagick::COMPRESSION_LZW);
 				$imageObj->setImageCompressionQuality($this->jpegQuality);
 				break;
-		}
 
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickCompress', $this->extKey, -1);		
+			case 'tga':
+				$imageObj->setImageCompression(Imagick::COMPRESSION_RLE);
+				$imageObj->setImageCompressionQuality($this->jpegQuality);
+				break;
+		}
 	}
 
     /**
@@ -463,33 +500,23 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @param	Imagick		Imagick object
 	 * @return	void
      */
-	private function imagickProfile(&$imageObj) {
-		/*
-		Using -profile filename adds an ICM (ICC color management), IPTC (newswire information), or a generic profile to the image.
-		Use +profile profile_name to remove the indicated profile. ImageMagick uses standard filename globbing, so wildcard expressions may be used to remove more than one profile. Here we remove all profiles from the image except for the XMP profile: +profile "!xmp,*".
-		*/
-		if ( $TYPO3_CONF['GFX']['im_useStripProfileByDefault']) {
-			
-			$profile = $TYPO3_CONF['GFX']['im_stripProfileCommand'];
-			if (substr($profile, 0, 1) == '+') {
-			
+	private function imagickRemoveProfile(&$imageObj) {
+
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickRemoveProfile', $this->extKey, -1);
+
+		$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
+		if ($gfxConf['im_useStripProfileByDefault']) {
+		
+			$profile = $gfxConf['im_stripProfileCommand'];
+			if (substr($profile, 0, 1) == '+') {			
 					// remove profiles
-				if ( $TYPO3_CONF['GFX']['im_stripProfileCommand'] == '+profile \'*\'') {
-						
+				if ( $gfxConf['im_stripProfileCommand'] == '+profile \'*\'') {
 						// remove all profiles and comments
 					$imageObj->stripImage();
 				}
-				/*else {
-					$imageObj->profileImage('*', NULL); // removes all profiles
-					$imageObj->profileImage('EXIF', NULL); // removes EXIF
-					$imageObj->profileImage('IPTC', NULL); // removes IPTC
-					$imageObj->profileImage('ICC', NULL); // removes ICC
-				}*/
 			}
 		}
-
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickProfile', $this->extKey, -1);		
 	}
 
     /**
@@ -499,15 +526,15 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @return	void
      */
 	private function imagickOptimizeResolution(&$imageObj) {
+
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickOptimizeResolution', $this->extKey, -1);
 	
 		$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
 		$imgDPI = intval($gfxConf['imagesDPI']);
 
-		if (intval($gfxConf['imagesDPI']) > 0)
+		if ($imgDPI > 0)
 			$imageObj->setImageResolution($imgDPI, $imgDPI);
-
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickOptimizeResolution', $this->extKey, -1);		
 	}
 	
     /**
@@ -516,19 +543,37 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
      * @param Imagick		Imagick object
 	 * @return	void
      */
-	private function imagickOptimize(&$imageObj) {
+	private function imagickOptimize($imageFile) {
 		
 		if ($this->NO_IMAGICK) {
 			return;
 		}
 
-		$imageObj->optimizeImageLayers();		
-		$this->imagickProfile($imageObj);
-		$this->imagickOptimizeResolution($imageObj);
-		$this->imagickCompress($imageObj);
-
 		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickOptimize', $this->extKey, -1);		
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickOptimize', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($imageFile))
+			$file = t3lib_div::getFileAbsFileName($imageFile, FALSE);
+		else
+			$file = $imageFile;
+
+		try {
+
+			$im = new Imagick($file);
+
+			$im->optimizeImageLayers();
+			
+			$this->imagickRemoveProfile($im);
+			$this->imagickOptimizeResolution($im);
+			$this->imagickCompress($im);
+
+			$im->writeImage($file);
+			$im->destroy();
+		}
+		catch(ImagickException $e) {
+			
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickOptimize >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+		}
 	}
 
 	/**
@@ -544,15 +589,18 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			return parent::IMreduceColors($file, $cols);
 		}
 
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->IMreduceColors', $this->extKey, -1);
+		
 		$fI = t3lib_div::split_fileref($file);
 		$ext = strtolower($fI['fileext']);
 		$result = $this->randomName() . '.' . $ext;
 		$reduce = $this->getIntRange($cols, 0, ($ext == 'gif' ? 256 : $this->truecolorColors), 0);
 		if ($reduce > 0) {
 
-			if (TYPO3_OS === 'WIN' )
-				$fileResult = PATH_site . $result;
-			else
+			if (!t3lib_div::isAbsPath($result))
+				$fileResult = t3lib_div::getFileAbsFileName($result, FALSE);
+			else 
 				$fileResult = $result;
 
 			try {
@@ -572,18 +620,17 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 					// Only save one pixel of each color
 				$newIm->uniqueImageColors();
 				
-				$this->imagickOptimize($newIm);
 				$newIm->writeImage($fileResult);
 				$newIm->destroy();
 				
-				if (TYPO3_DLOG)
-					t3lib_div::devLog('ux_t3lib_stdGraphic->IMreduceColors', $this->extKey, -1);
+					// Optimize image
+				$this->imagickOptimize($fileResult);
 				
 				return $result;	
 			}
 			catch(ImagickException $e) {
 				
-				t3lib_div::sysLog('ux_t3lib_stdGraphic->IMreduceColors() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+				t3lib_div::sysLog('ux_t3lib_stdGraphic->IMreduceColors >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			}			
 		}
 		return '';
@@ -599,6 +646,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @see tslib_gifBuilder::make(), applyImageMagickToPHPGif()
 	 * /
 	function makeEffect(&$im, $conf) {
+
 		if ($this->NO_IMAGICK) {
 			return parent::makeEffect(&$im, $conf);
 		}
@@ -665,6 +713,9 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		if ($this->NO_IMAGICK || $this->NO_IM_EFFECTS || !$this->V5_EFFECTS) {
 			return;
 		}
+		
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->applyImagickEffect', $this->extKey, -1);
 
 		$command = strtolower(trim($command));
 		$command = str_ireplace('-', '', $command);		
@@ -710,14 +761,26 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 				case 'gamma':	// brighter, darker
 					$this->imagickGamma($file, $elems[1]);
 					break;
+				
+				case '@sepia':
+					$this->imagickSepia($file, intval($elems[1]));
+					break;
+					
+				case '@corners':
+					$this->imagickRoundCorners($file, intval($elems[1]));
+					break;
+
+				case '@polaroid':
+					$this->imagickPolaroid($file, intval($elems[1]));
+					break;
 
 				/* compression */
 				case 'colors':
-					$this->IMreduceColors($file, $elems[1]);
+					$this->IMreduceColors($file, intval($elems[1]));
 					break;
 
 				case 'quality':
-					$this->IMreduceColors($file, $elems[1]);
+					$this->IMreduceColors($file, intval($elems[1]));
 					break;
 			}
 		}
@@ -738,11 +801,11 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			switch($elems[1]) {
 
 				case 'colors':
-					$this->IMreduceColors($file, $elems[2]);
+					$this->IMreduceColors($file, intval($elems[2]));
 					break;
 
 				case 'quality':
-					$this->IMreduceColors($file, $elems[2]);
+					$this->IMreduceColors($file, intval($elems[2]));
 					break;
 			}
 
@@ -762,11 +825,23 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 					break;
 
 				case 'sharpen':
-					$this->imagickSharpen($file, $elems[1]);
+					$this->imagickSharpen($file, intval($elems[1]));
 					break;
 					// brighter, darker
 				case 'gamma':
-					$this->imagickGamma($file, $elems[1]);
+					$this->imagickGamma($file, intval($elems[1]));
+					break;
+				
+				case '@sepia':
+					$this->imagickSepia($file, intval($elems[1]));
+					break;
+					
+				case '@corners':
+					$this->imagickCoundCorners($file, $elems[1]);
+					break;
+
+				case '@polaroid':
+					$this->imagickPolaroid($file, intval($elems[1]));
 					break;
 			}
 			
@@ -774,11 +849,11 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			switch($elems[2]) {
 
 				case 'colors':
-					$this->IMreduceColors($file, $elems[3]);
+					$this->IMreduceColors($file, intval($elems[3]));
 					break;
 
 				case 'quality':
-					$this->IMreduceColors($file, $elems[3]);
+					$this->IMreduceColors($file, intval($elems[3]));
 					break;
 			}
 			
@@ -786,17 +861,17 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		else {
 			t3lib_div::devLog('ux_t3lib_stdGraphic->applyImagickEffect> Not expected amount of parameters', $this->extKey, 2, $elems);
 		}
-		
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_t3lib_stdGraphic->applyImagickEffect', $this->extKey, -1);
 	}
 
 	private function imagickGamma($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickGamma', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -804,27 +879,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->gammaImage($value);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickGamma', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickGamma() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickGamma >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}		
 	}
 	
 	private function imagickBlur($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickBlur', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -832,27 +907,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->blurImage($value);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickBlur', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickBlur() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickBlur >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}		
 	}
 	
 	private function imagickSharpen($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickSharpen', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -860,27 +935,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->sharpenImage(0, $value);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickSharpen', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickSharpen() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickSharpen >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickRotate($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickRotate', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -888,27 +963,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->rotateImage(new ImagickPixel(), $value);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickRotate', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickRotate() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickRotate >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickSolarize($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickSolarize', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -916,27 +991,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->solarizeImage($value);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickSolarize', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickSolarize() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickSolarize >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickSwirl($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickSwirl', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -944,27 +1019,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->swirlImage($value);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickSwirl', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickSwirl() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickSwirl >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickWawe($file, $value1, $value2) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickWawe', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -972,27 +1047,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->waveImage($value1, $value2);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickWawe', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickWawe() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickWawe >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickCharcoal($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickCharcoal', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -1000,27 +1075,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->charcoalImage($value);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickCharcoal', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickCharcoal() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickCharcoal >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickGray($file) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickGray', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		$fI = t3lib_div::split_fileref($file);
 		$ext = strtolower($fI['fileext']);
@@ -1032,27 +1107,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			//$newIm->setImageColorspace(Imagick::COLORSPACE_GRAY);
 			$newIm->setImageType(Imagick::IMGTYPE_GRAYSCALE);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickGray', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickGray() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickGray >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickEdge($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickEdge', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -1060,27 +1135,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->edgeImage($value);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickEdge', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickEdge() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickEdge >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickEmboss($file) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickEmbross', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -1088,27 +1163,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->embossImage(0);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickEmbross', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickEmbross() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickEmbross >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickFlip($file) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickFlip', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -1116,27 +1191,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->flipImage();
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickFlip', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickFlip() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickFlip >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickFlop($file) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickFlop', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -1144,27 +1219,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->flopImage();
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickFlop', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickFlop() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickFlop >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickColors($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickColors', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -1174,27 +1249,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 				// Only save one pixel of each color
 			$newIm->uniqueImageColors();
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickColors', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickColors() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickColors >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickShear($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickShear', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -1202,27 +1277,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->shearImage($newIm->getImageBackgroundColor(), $value, $value);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickShear', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickShear() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickShear >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickInvert($file, $value) {
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickInvert', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
@@ -1230,79 +1305,170 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 			$newIm->negateImage(0);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickInvert', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickInvert() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickInvert >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickNormalize($file) {
+
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickNormalize', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 	
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
-			
 		try {
 			$newIm = new Imagick();
 			$newIm->readImage($fileResult);
 		
 			$newIm->normalizeImage();
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickNormalize', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickNormalize() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickNormalize >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 
 	private function imagickContrast($file, $value = 1) {
 	
-		$val = $this->getIntRange($value, 0, 9);
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickContrast', $this->extKey, -1);
 		
-		if (TYPO3_OS === 'WIN')
-			$fileResult = PATH_site . $file;
-		else
-			$fileResult = $result;
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
 			
 		try {
 			$newIm = new Imagick();
 			$newIm->readImage($fileResult);
-		
+
+			$val = $this->getIntRange($value, 0, 9);
 			$newIm->contrastImage($val);
 		
-			$this->imagickOptimize($newIm);
 			$newIm->writeImage($fileResult);
 			$newIm->destroy();
 			
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickNormalize', $this->extKey, -1);
-			
-			return $result;				
+			return TRUE;
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickNormalize() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickContrast >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
+		}
+	}
+
+	private function imagickSepia($file, $value) {
+	
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickSepia', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
+			
+		try {
+			$newIm = new Imagick();
+			$newIm->readImage($fileResult);
+
+			if ($this->quantumRange < 0)
+				$this->getQuantumRangeLong();
+			
+			$value = $this->getIntRange($value, 0, $this->quantumRange);
+
+			$newIm->sepiaToneImage($value);
+
+			$newIm->writeImage($fileResult);
+			$newIm->destroy();
+			
+			return TRUE;
+		}
+		catch(ImagickException $e) {
+			
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickSepia >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
 		}
 	}
 	
+	private function imagickRoundCorners($file, $value) {
+	
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickRoundCorners', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
+		
+		try {
+			$newIm = new Imagick();
+			$newIm->readImage($fileResult);
+
+			$newIm->roundCorners($value, $value);
+		
+			$newIm->writeImage($fileResult);
+			$newIm->destroy();
+			
+			return TRUE;
+		}
+		catch(ImagickException $e) {
+			
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickRoundCorners >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
+		}
+	}
+
+	private function imagickPolaroid($file, $value) {
+
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_t3lib_stdGraphic->imagickPolaroid', $this->extKey, -1);
+		
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
+			
+		try {
+			$newIm = new Imagick();
+			$newIm->readImage($fileResult);
+
+				// polaroidImage() changes image geometry so we have to resize images after aplying the effect
+			$geo = $newIm->getImageGeometry();
+			$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
+			
+			$newIm->polaroidImage(new ImagickDraw(), $value); // IM >= 6.3.2
+			
+			$newIm->resizeImage($geo['width'], $geo['height'], $gfxConf['windowing_filter'], 1);
+
+			$newIm->writeImage($fileResult);
+			$newIm->destroy();
+			
+			return TRUE;
+		}
+		catch(ImagickException $e) {
+			
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickPolaroid >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
+		}
+	}
+
     /**
      * Wraper function for compatibility with versions older than 4.6.
      * 
@@ -1314,8 +1480,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
      */
 	private function getIntRange($theInt, $theMin, $theMax, $theDefault = 0) {
 		
-		$res = 0;
-
+		$res = $theDefault;
 		if (version_compare(TYPO3_version, '4.6.0', '>='))
 			$res = t3lib_utility_Math::forceIntegerInRange($theInt, $theMin, $theMax, $theDefault);
 		else
@@ -1331,10 +1496,13 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @return	array	Image information
      */
 	public function imagickGetDetailedImageInfo($imagefile) {
-		/*
-		if (TYPO3_OS === 'WIN')
-			$file = $this->wrapFileName(PATH_site . $imagefile);
-		else*/
+		
+		if (TYPO3_DLOG)
+			t3lib_div::devLog('ux_tslib_gifBuilder->imagickGetDetailedImageInfo', $this->extKey, -1);
+
+		if (!t3lib_div::isAbsPath($imagefile))
+			$file = t3lib_div::getFileAbsFileName($imagefile, FALSE);
+		else 
 			$file = $imagefile;
 
 		try {
@@ -1352,8 +1520,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 					'Compression: ' => $identify['compression']
 				)
 			);
-			if (!empty($identify['resolution']['x'])) {
-			
+			if (!empty($identify['resolution']['x'])) {			
 				$res['Basic image properties'] = array_merge($res['Basic image properties'], 
 					array(
 						'Resolution: ' => $identify['resolution']['x'] . 'x' . $identify['resolution']['y'] . ' dpi'
@@ -1362,19 +1529,14 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			}
 
 			$res['All image properties'] = array();
-			foreach ( $im->getImageProperties() as $k => $v )
-			{
+			foreach ( $im->getImageProperties() as $k => $v ) {
 				$res['All image properties'] = array_merge($res['All image properties'], array($k => $v));
 			}
 
 			$res['All image profiles'] = array();
-			foreach ( $im->getImageProfiles() as $k => $v )
-			{
-				$res['Profile name'] = array_merge($res['Profile name'], array($k => '(size: ' . strlen( $v ) . ')'));
+			foreach ( $im->getImageProfiles() as $k => $v ) {
+				$res['All image profiles'] = array_merge($res['All image profiles'], array($k => '(size: ' . strlen( $v ) . ')'));
 			}
-
-			if (TYPO3_DLOG)
-				t3lib_div::devLog('ux_t3lib_stdGraphic->imagickGetDetailedImageInfo', $this->extKey, -1);
 
 			$im->destroy();
 			
@@ -1382,7 +1544,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickGetDetailedImageInfo() >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog('ux_t3lib_stdGraphic->imagickGetDetailedImageInfo >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
