@@ -432,6 +432,8 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 
 				// Optimize image
 			$this->imagickOptimize($fileOutput);
+			
+			t3lib_div::fixPermissions($output);
 		}
 		catch(ImagickException $e) {
 			
@@ -625,6 +627,8 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 
 					// Optimize image
 				$this->imagickOptimize($fileResult);
+				
+				t3lib_div::fixPermissions($file);
 				
 				return $result;				
 			}
@@ -837,7 +841,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 					break;
 					
 				case '@corners':
-					$this->imagickCoundCorners($file, $elems[1]);
+					$this->imagickRoundCorners($file, $elems[1]);
 					break;
 
 				case '@polaroid':
@@ -861,6 +865,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		else {
 			t3lib_div::devLog('ux_tslib_gifBuilder->applyImagickEffect> Not expected amount of parameters', $this->extKey, 2, $elems);
 		}
+		t3lib_div::fixPermissions($file);
 	}
 
 	private function imagickGamma($file, $value) {

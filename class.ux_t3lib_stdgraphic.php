@@ -423,7 +423,6 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			}
 			$baseObj->compositeImage($overObj, Imagick::COMPOSITE_MULTIPLY, 0, 0); //COMPOSITE_MULTIPLY
 			$baseObj->setImageMatte(FALSE); // IM >= 6.2.9
-			
 
 			$baseObj->writeImage($fileOutput);
 
@@ -433,6 +432,8 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 
 				// Optimize image
 			$this->imagickOptimize($fileOutput);
+			
+			t3lib_div::fixPermissions($output);
 		}
 		catch(ImagickException $e) {
 			
@@ -625,6 +626,8 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 				
 					// Optimize image
 				$this->imagickOptimize($fileResult);
+
+				t3lib_div::fixPermissions($file);
 				
 				return $result;	
 			}
@@ -837,7 +840,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 					break;
 					
 				case '@corners':
-					$this->imagickCoundCorners($file, $elems[1]);
+					$this->imagickRoundCorners($file, $elems[1]);
 					break;
 
 				case '@polaroid':
@@ -861,6 +864,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		else {
 			t3lib_div::devLog('ux_t3lib_stdGraphic->applyImagickEffect> Not expected amount of parameters', $this->extKey, 2, $elems);
 		}
+		t3lib_div::fixPermissions($file);
 	}
 
 	private function imagickGamma($file, $value) {
