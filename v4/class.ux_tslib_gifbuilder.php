@@ -2,7 +2,7 @@
 /***************************************************************
 *  Copyright notice
 *
-*  (c) 2010-2012 Radu Dumbrăveanu <vundicind@gmail.com>
+*  (c) 2010-2013 Radu Dumbrăveanu <vundicind@gmail.com>
 *  All rights reserved
 *
 *  This script is part of the TYPO3 project. The TYPO3 project is
@@ -45,19 +45,22 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	 */
 	function init()	{
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->init', $this->extKey, -1);
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		if (!extension_loaded('imagick')) {
 			
 			$this->NO_IMAGICK = 1;
-			$sMsg = 'PHP extension Imagick is not loaded. Extension Imagickimg is deactivated.';
+			$TYPO3_CONF_VARS['GFX']['imagick'] = 0;
 			
+			$sMsg = 'PHP extension Imagick is not loaded. Extension Imagickimg is deactivated.';			
 			t3lib_div::sysLog($sMsg, $this->extKey, t3lib_div::SYSLOG_SEVERITY_WARNING);
-			if (TYPO3_DLOG) 
-				t3lib_div::devLog($sMsg, $this->extKey, 2);
-		}
-		else {
+			if (TYPO3_DLOG) t3lib_div::devLog($sMsg, $this->extKey, 2);
+		
+		} else {
+		
+			$this->NO_IMAGICK = 0;
+			$TYPO3_CONF_VARS['GFX']['imagick'] = 1;
+			
 				// Get IM version and overwrite user settings
 			$ver = $this->getIMversion(TRUE);
 			$TYPO3_CONF_VARS['GFX']['im_version_5'] = $ver;
@@ -71,8 +74,11 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 				$TYPO3_CONF_VARS['GFX']['im_no_effects'] = 1;
 				$TYPO3_CONF_VARS['GFX']['im_v5effects'] = 0;
 			}
+			
+			if (TYPO3_DLOG) 
+				t3lib_div::devLog(__METHOD__, $this->extKey, 0, $TYPO3_CONF_VARS['GFX']);
 		}
-		
+
 		parent::init();
 	}
 
@@ -85,11 +91,9 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
      */
 	private function getIMversion($returnString = true) {
 
-		if ($this->NO_IMAGICK)
-			return '';
+		if ($this->NO_IMAGICK) return '';
 
-		if (TYPO3_DLOG) 
-			t3lib_div::devLog('ux_tslib_gifBuilder->getIMversion', $this->extKey, -1);
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		$im_ver = '';
 		try {
@@ -97,14 +101,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 			$a = $im->getVersion();
 			$im->destroy();
 
-			if (is_array($a)) {				
-					// $arr['versionString'] is string 'ImageMagick 6.7.9-1 2012-08-21 Q8 http://www.imagemagick.org' (length=60)
-				$v = explode(' ', $a['versionString']);
+				// $arr['versionString'] is string 'ImageMagick 6.7.9-1 2012-08-21 Q8 http://www.imagemagick.org' (length=60)
+			if (is_array($a)) {
 					// Add Imagick version info
-				$v[] = 'Imagick';
-				$v[] = Imagick::IMAGICK_EXTVER;
-				$v[] = Imagick::IMAGICK_EXTNUM;
+				$a['versionImagick'] = 'Imagick ' . Imagick::IMAGICK_EXTVER;
 				
+				if (TYPO3_DLOG)
+					t3lib_div::devLog(__METHOD__ . ' found version', $this->extKey, 0, $a);
+
+					// extract major IM version 
+				$v = explode(' ', $a['versionString']);				
 				if (count($v) >= 1) {
 					$a = explode('.', $v[1]);
 					if (count($a) >= 2) {
@@ -113,24 +119,23 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 				}
 			}
 			if (!$returnString) {
-				$im_ver = $v;
+				$im_ver = $a;
 			}
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->getIMversion >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 
 		return $im_ver;
 	}
-	
+
+
 	private function getQuantumRangeLong() {
 		
-		if ($this->NO_IMAGICK)
-			return;
+		if ($this->NO_IMAGICK) return;
 		
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->getQuantumRangeLong', $this->extKey, -1);
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		try {
 			$newIm = new Imagick();
@@ -145,7 +150,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->getQuantumRangeLong >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
@@ -165,12 +170,10 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	 */
 	function imageMagickConvert($imagefile, $newExt = '', $w = '', $h = '', $params = '', $frame = '', $options = '', $mustCreate = 0)	{
 
-		if ($this->NO_IMAGICK) {
+		if ($this->NO_IMAGICK)
 			return parent::imageMagickConvert($imagefile, $newExt, $w, $h, $params, $frame, $options, $mustCreate);
-		}
 
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imageMagickConvert', $this->extKey, -1);
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		if($info = $this->getImageDimensions($imagefile))	{
 			$newExt = strtolower(trim($newExt));
@@ -287,7 +290,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 					}
 					catch(ImagickException $e) {
 						
-						t3lib_div::sysLog('ux_tslib_gifBuilder->imageMagickConvert >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+						t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 					}
 				}
 				if (file_exists($output))	{
@@ -312,12 +315,11 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	 */	 
 	function imageMagickIdentify($imagefile) {
 		
-		if ($this->NO_IMAGICK) {
+		if ($this->NO_IMAGICK)
 			return parent::imageMagickIdentify($imagefile);
-		}
 		
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imageMagickIdentify', $this->extKey, 0, $arRes);
+		if (TYPO3_DLOG) 
+			t3lib_div::devLog(__METHOD__, $this->extKey, 0, $arRes);
 
 			// Core FE uses gifBuilder and relative paths.
 		if (!t3lib_div::isAbsPath($imagefile))
@@ -340,7 +342,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imageMagickIdentify >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}			
 		return $arRes;
 	}
@@ -358,12 +360,10 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	 */
 	function combineExec($input, $overlay, $mask, $output, $handleNegation = FALSE) {
 		
-		if ($this->NO_IMAGICK) {
+		if ($this->NO_IMAGICK)
 			return parent::combineExec($input, $overlay, $mask, $output, $handleNegation);
-		}
 			
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->combineExec', $this->extKey, -1);
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		if (!t3lib_div::isAbsPath($input))
 			$fileInput = t3lib_div::getFileAbsFileName($input, FALSE);
@@ -437,7 +437,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->combineExec >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 		
 		return '';
@@ -452,11 +452,11 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
      */
 	private function imagickCompress(&$imageObj) {
 		
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickCompress', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+		
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 	
 		$imgExt = strtolower($imageObj->getImageFormat());
-		
 		switch($imgExt) {
 			
 			case 'gif':
@@ -504,8 +504,9 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
      */
 	private function imagickRemoveProfile(&$imageObj) {
 		
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickRemoveProfile', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+		
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 			
 		$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
 		if ($gfxConf['im_useStripProfileByDefault']) {
@@ -529,8 +530,9 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
      */
 	private function imagickOptimizeResolution(&$imageObj) {
 
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickOptimizeResolution', $this->extKey, -1);	
+		if ($this->NO_IMAGICK) return;
+		
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 	
 		$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
 		$imgDPI = intval($gfxConf['imagesDPI']);
@@ -547,12 +549,9 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
      */
 	private function imagickOptimize($imageFile) {
 		
-		if ($this->NO_IMAGICK) {
-			return;
-		}
+		if ($this->NO_IMAGICK) return;
 
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickOptimize', $this->extKey, -1);
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		if (!t3lib_div::isAbsPath($imageFile))
 			$file = t3lib_div::getFileAbsFileName($imageFile, FALSE);
@@ -574,9 +573,62 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickOptimize >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
+
+	
+	private function imagickOptimizeObject(&$imObject) {
+		
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
+		
+		$imObject->optimizeImageLayers();
+		
+		$this->imagickRemoveProfile($imObject);
+		$this->imagickOptimizeResolution($imObject);
+		$this->imagickCompress($imObject);
+	}
+
+	
+	private function imagickSetColorspace($file, $colorSpace) {
+
+	if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
+
+		if (!t3lib_div::isAbsPath($file))
+			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
+		else 
+			$fileResult = $file;
+			
+		try {
+			$newIm = new Imagick();
+			$newIm->readImage($fileResult);
+
+			switch(strtoupper($colorSpace)) {
+				case 'GRAY':
+					$newIm->setImageColorspace(imagick::COLORSPACE_GRAY); // IM >= 6.5.7
+					break;
+				
+				case 'RGB':
+					$newIm->setImageColorspace(imagick::COLORSPACE_RGB); // IM >= 6.5.7
+					break;
+			}
+		
+			$newIm->writeImage($fileResult);
+			$newIm->destroy();
+			
+			return TRUE;
+		}
+		catch(ImagickException $e) {
+			
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			return FALSE;
+		}		
+	}
+
 
 	/**
 	 * Reduce colors in image using IM and create a palette based image if possible (<=256 colors)
@@ -587,27 +639,31 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	 */
 	function IMreduceColors($file, $cols) {
 	
-		if ($this->NO_IMAGICK) {
+		if ($this->NO_IMAGICK)
 			return parent::IMreduceColors($file, $cols);
-		}
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->IMreduceColors', $this->extKey, -1);
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey, 0, array($file, $cols));
 
 		$fI = t3lib_div::split_fileref($file);
 		$ext = strtolower($fI['fileext']);
 		$result = $this->randomName() . '.' . $ext;
-		$reduce = $this->getIntRange($cols, 0, ($ext == 'gif' ? 256 : $this->truecolorColors), 0);
-		if ($reduce > 0) {
+		if (($reduce = $this->getIntRange($cols, 0, ($ext == 'gif' ? 256 : $this->truecolorColors), 0)) > 0) {
+
+			if (!t3lib_div::isAbsPath($file))
+				$fileInput = t3lib_div::getFileAbsFileName($file, FALSE);
+			else 
+				$fileInput = $file;
 
 			if (!t3lib_div::isAbsPath($result))
 				$fileResult = t3lib_div::getFileAbsFileName($result, FALSE);
 			else 
 				$fileResult = $result;
+				
+			if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey, 0, array($fileInput, $fileResult, $reduce));
 
 			try {
 				$newIm = new Imagick();
-				$newIm->readImage($fileResult);
+				$newIm->readImage($fileInput);
 			
 				if ($reduce <= 256) {
 					$newIm->setType(imagick::IMGTYPE_PALETTE);
@@ -628,13 +684,13 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 					// Optimize image
 				$this->imagickOptimize($fileResult);
 				
-				t3lib_div::fixPermissions($file);
+				t3lib_div::fixPermissions($fileResult);
 				
 				return $result;				
 			}
 			catch(ImagickException $e) {
 				
-				t3lib_div::sysLog('ux_tslib_gifBuilder->IMreduceColors >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+				t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			}
 		}
 		return '';
@@ -648,22 +704,24 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	 * @param	array		TypoScript array with configuration for the GIFBUILDER object.
 	 * @return	void
 	 * @see tslib_gifBuilder::make(), applyImageMagickToPHPGif()
-	 * /
+	 */
+	/*
 	function makeEffect(&$im, $conf) {
 
-		if ($this->NO_IMAGICK) {
+		if ($this->NO_IMAGICK)
 			return parent::makeEffect(&$im, $conf);
-		}
 
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
+			
 		$commands = $this->IMparams($conf['value']);
 		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->makeEffect', $this->extKey, 0, array($commands));
+			t3lib_div::devLog(__METHOD__, $this->extKey, 0, array($commands));
 
 		if ($commands) {
 			$this->applyImageMagickToPHPGif($im, $commands);
 		}
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->makeEffect', $this->extKey, -1);
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 	}*/
 
 	/**
@@ -672,15 +730,15 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	 * @param	pointer		The image pointer (reference)
 	 * @param	string		The ImageMagick parameters. Like effects, scaling etc.
 	 * @return	void
-	 * /
+	 */
+	 /*
 	function applyImageMagickToPHPGif(&$im, $command) {
 		
-		if ($this->NO_IMAGICK) {
+		if ($this->NO_IMAGICK)
 			return parent::applyImageMagickToPHPGif(&$im, $command);
-		}
 
 		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_t3lib_gifBuilder->applyImageMagickToPHPGif', $this->extKey, -1, array($command));
+			t3lib_div::devLog(__METHOD__, $this->extKey, -1, array($command));
 
 		$tmpStr = $this->randomName();
 		$theFile = $tmpStr . '.' . $this->gifExtension;
@@ -701,8 +759,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 			unlink($theFile);
 		}
 
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->applyImageMagickToPHPGif', $this->extKey, -1);
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 	}*/
 	
     /**
@@ -714,19 +771,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
      */
 	function applyImagickEffect($file, $command) {
 		
-		if ($this->NO_IMAGICK || $this->NO_IM_EFFECTS || !$this->V5_EFFECTS) {
-			return;
-		}
+		if ($this->NO_IMAGICK || $this->NO_IM_EFFECTS || !$this->V5_EFFECTS) return;
 		
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->applyImagickEffect', $this->extKey, -1);
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		$command = strtolower(trim($command));
 		$command = str_ireplace('-', '', $command);		
 		$elems = t3lib_div::trimExplode(' ', $command, true);
 
 		if (TYPO3_DLOG)
-			t3lib_div::devLog('applyImagickEffect', $this->extKey, 0, array($file, $elems));
+			t3lib_div::devLog(__METHOD__, $this->extKey, 0, array($file, $elems));
 
 			// Here we're trying to identify ImageMagick parameters
 			// Image compression see tslib_cObj->image_compression
@@ -756,6 +810,8 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 				case 'colorspace':
 					if ($elems[1] == 'gray')
 						$this->imagickGray($file);
+					else
+						$this->imagickSetColorspace($file, $elems[1]);
 					break;
 
 				case 'sharpen':
@@ -826,6 +882,8 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 				case 'colorspace':
 					if ($elems[1] == 'gray')
 						$this->imagickGray($file);
+					else
+						$this->imagickSetColorspace($file, $elems[1]);
 					break;
 
 				case 'sharpen':
@@ -859,19 +917,73 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 				case 'quality':
 					$this->IMreduceColors($file, intval($elems[3]));
 					break;
+			}			
+		}
+		elseif (count($elems) == 6) {
+		
+			/* colorspace */
+			switch($elems[0]) {
+				case 'colorspace':
+					if ($elems[1] == 'gray')
+						$this->imagickGray($file);
+					else
+						$this->imagickSetColorspace($file, $elems[1]);
+					break;
+			}
+
+			/* quality */
+			switch($elems[2]) {
+				case 'quality':
+					$this->IMreduceColors($file, intval($elems[3]));
+					break;
 			}
 			
-		}
-		else {
-			t3lib_div::devLog('ux_tslib_gifBuilder->applyImagickEffect> Not expected amount of parameters', $this->extKey, 2, $elems);
+			/* effect */
+			switch($elems[4]) {
+
+				case 'rotate':
+					$this->imagickRotate($file, $elems[5]);
+					break;
+
+				case 'colorspace':
+					if ($elems[5] == 'gray')
+						$this->imagickGray($file);
+					else
+						$this->imagickSetColorspace($file, $elems[5]);
+					break;
+
+				case 'sharpen':
+					$this->imagickSharpen($file, intval($elems[5]));
+					break;
+					// brighter, darker
+				case 'gamma':
+					$this->imagickGamma($file, intval($elems[5]));
+					break;
+				
+				case '@sepia':
+					$this->imagickSepia($file, intval($elems[5]));
+					break;
+					
+				case '@corners':
+					$this->imagickRoundCorners($file, $elems[5]);
+					break;
+
+				case '@polaroid':
+					$this->imagickPolaroid($file, intval($elems[5]));
+					break;
+			}
+		
+		} else {
+			t3lib_div::devLog(__METHOD__ . ' > Not expected amount of parameters', $this->extKey, 2, $elems);
 		}
 		t3lib_div::fixPermissions($file);
 	}
 
 	private function imagickGamma($file, $value) {
 
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickGamma', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+	
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 	
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -891,15 +1003,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickGamma >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}		
 	}
 	
 	private function imagickBlur($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickBlur', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -919,15 +1032,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickBlur >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}		
 	}
 	
 	private function imagickSharpen($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickSharpen', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -947,15 +1061,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSharpen >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickRotate($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickRotate', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -975,15 +1090,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickRotate >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickSolarize($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickSolarize', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1003,15 +1119,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSolarize >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickSwirl($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickSwirl', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1031,15 +1148,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSwirl >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickWawe($file, $value1, $value2) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickWawe', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1059,15 +1177,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickWawe >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickCharcoal($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickCharcoal', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1087,15 +1206,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickCharcoal >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickGray($file) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickGray', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1119,15 +1239,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickGray >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickEdge($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickEdge', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1147,15 +1268,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickEdge >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickEmboss($file) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickEmbross', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1175,15 +1297,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickEmbross >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickFlip($file) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickFlip', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1203,15 +1326,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickFlip >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickFlop($file) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickFlop', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1231,15 +1355,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickFlop >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickColors($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickColors', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1261,15 +1386,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickColors >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickShear($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickShear', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1289,15 +1415,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickShear >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickInvert($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickInvert', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1317,15 +1444,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickInvert >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickNormalize($file) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickNormalize', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1345,15 +1473,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickNormalize >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickContrast($file, $value = 1) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickContrast', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1374,15 +1503,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickContrast >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickSepia($file, $value) {
 	
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickSepia', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1406,15 +1536,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickSepia >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickRoundCorners($file, $value) {
 
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickRoundCorners', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1434,15 +1565,16 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickRoundCorners >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
 
 	private function imagickPolaroid($file, $value) {
 
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickPolaroid', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 		
 		if (!t3lib_div::isAbsPath($file))
 			$fileResult = t3lib_div::getFileAbsFileName($file, FALSE);
@@ -1468,7 +1600,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickPolaroid >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 			return FALSE;
 		}
 	}
@@ -1485,7 +1617,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	private function getIntRange($theInt, $theMin, $theMax, $theDefault = 0) {
 		
 		$res = $theDefault;
-		if (version_compare(TYPO3_version, '4.6.0', '>='))
+		if (function_exists('t3lib_utility_Math::forceIntegerInRange'))
 			$res = t3lib_utility_Math::forceIntegerInRange($theInt, $theMin, $theMax, $theDefault);
 		else
 			$res = t3lib_div::intInRange($theInt, $theMin, $theMax, $theDefault);
@@ -1501,8 +1633,9 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
      */
 	public function imagickGetDetailedImageInfo($imagefile) {
 		
-		if (TYPO3_DLOG)
-			t3lib_div::devLog('ux_tslib_gifBuilder->imagickGetDetailedImageInfo', $this->extKey, -1);
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		if (!t3lib_div::isAbsPath($imagefile))
 			$file = t3lib_div::getFileAbsFileName($imagefile, FALSE);
@@ -1539,7 +1672,9 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 
 			$res['All image profiles'] = array();
 			foreach ( $im->getImageProfiles() as $k => $v ) {
-				$res['All image profiles'] = array_merge($res['All image profiles'], array($k => '(size: ' . strlen( $v ) . ')'));
+				$res['All image profiles'] = array_merge($res['All image profiles'], array(
+					$k => '(size: ' . t3lib_div::formatSize(strlen( $v ), ' | KB| MB| GB') . ')'
+				));
 			}
 
 			$im->destroy();
@@ -1548,10 +1683,121 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 		}
 		catch(ImagickException $e) {
 			
-			t3lib_div::sysLog('ux_tslib_gifBuilder->imagickGetDetailedImageInfo >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
+			t3lib_div::sysLog(__METHOD__ . ' >> ' . $e->getMessage(), $this->extKey, t3lib_div::SYSLOG_SEVERITY_ERROR);
 		}
 	}
 
+
+    /**
+     * Creates proportional thumbnails
+     * 
+     * @param <object> $imObj 
+     * @param <int> $w - image width
+     * @param <int> $h - image height 
+     */
+	private function imagickThumbProportional(&$imObj, $w, $h) {
+	
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
+
+		// Resizes to whichever is larger, width or height
+		if ($imObj->getImageHeight() <= $imObj->getImageWidth()) {
+			// Resize image using the lanczos resampling algorithm based on width
+			$imObj->resizeImage($w, 0, Imagick::FILTER_LANCZOS, 1);
+		} else {
+			// Resize image using the lanczos resampling algorithm based on height
+			$imObj->resizeImage(0, $h, Imagick::FILTER_LANCZOS, 1);
+		}
+	}
+	
+
+    /**
+     * Creates cropped thumbnails
+     * 
+     * @param <object> $imObj 
+     * @param <int> $w - image width
+     * @param <int> $h - image height 
+     */
+	private function imagickThumbCropped(&$imObj, $w, $h) {
+	
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
+
+		$imObj->cropThumbnailImage($w, $h);
+	}
+
+	
+    /**
+     * Creates sampled thumbnails
+     * 
+     * @param <object> $imObj 
+     * @param <int> $w - image width
+     * @param <int> $h - image height 
+     */
+	private function imagickThumbSampled(&$imObj, $w, $h) {
+	
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
+
+		$imObj->sampleImage($w, $h);
+	}	
+
+	
+	public function imagickThumbnailImage($fileIn, $fileOut, $w, $h) {
+
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG)
+			t3lib_div::devLog(__METHOD__, $this->extKey, -1, array($fileIn, $fileOut, $w, $h));
+	
+		$bRes = FALSE;
+		$imgDPI = intval($this->gfxConf['imagesDPI']);
+		
+		try {
+			$newIm = new Imagick($fileIn);
+			if ($imgDPI > 0)
+				$newIm->setImageResolution($imgDPI, $imgDPI);
+
+			if ($this->gfxConf['im_useStripProfileByDefault']) {
+				$newIm->stripImage();
+			}
+			
+			switch($this->gfxConf['thumbnailingMethod']) {
+				case 'CROPPED':
+					$this->imagickThumbCropped($newIm, $w, $h);
+					break;
+					
+				case 'SAMPLED':
+					$this->imagickThumbSampled($newIm, $w, $h);
+					break;
+					
+				default:
+					$this->imagickThumbProportional($newIm, $w, $h);
+					break;							
+			}
+	
+			$this->imagickOptimizeObject($newIm);
+	
+			$newIm->writeImage($fileOut);
+			
+			$newIm->destroy();
+
+			if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
+			
+			$bRes = TRUE;
+		} catch(ImagickException $e) {
+			
+			t3lib_div::sysLog(
+				__METHOD__ . $e->getMessage(),
+				$this->extKey, 
+				t3lib_div::SYSLOG_SEVERITY_ERROR);
+		}
+		
+		return $bRes;
+	}
 
 }
 ?>

@@ -2,7 +2,7 @@
 /***************************************************************
 *  Copyright notice
 *
-*  (c) 2010-2012 Tomasz Krawczyk <tomasz@typo3.pl>
+*  (c) 2010-2013 Tomasz Krawczyk <tomasz@typo3.pl>
 *  All rights reserved
 *
 *  This script is part of the TYPO3 project. The TYPO3 project is
@@ -24,6 +24,8 @@
 
 class ux_SC_show_item extends SC_show_item	{
 
+	private $extKey = 'imagickimg';
+
 	/**
 	 * Main function. Will generate the information to display for the item set internally.
 	 *
@@ -32,7 +34,9 @@ class ux_SC_show_item extends SC_show_item	{
 	 */
 	function renderFileInfo($returnLinkTag)	{
 
-			// Initialize object to work on the image:
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
+
+		// Initialize object to work on the image:
 		$imgObj = t3lib_div::makeInstance('t3lib_stdGraphic');
 		$imgObj->init();
 		$imgObj->mayScaleUp = 0;
