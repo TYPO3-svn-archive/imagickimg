@@ -44,14 +44,14 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 *
 	 * @return	void
 	 */
-	function init()	{
+	public function init()	{
 	
 		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 
 		if (!extension_loaded('imagick')) {
 			
-			$this->NO_IMAGICK = 1;
-			$TYPO3_CONF_VARS['GFX']['imagick'] = 0;
+			$this->NO_IMAGICK = TRUE;
+			$GLOBALS['TYPO3_CONF_VARS']['GFX']['imagick'] = 0;
 			
 			$sMsg = 'PHP extension Imagick is not loaded. Extension Imagickimg is deactivated.';			
 			t3lib_div::sysLog($sMsg, $this->extKey, t3lib_div::SYSLOG_SEVERITY_WARNING);
@@ -59,27 +59,27 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 		} else {
 			
-			$this->NO_IMAGICK = 0;
-			$TYPO3_CONF_VARS['GFX']['imagick'] = 1;
+			$this->NO_IMAGICK = FALSE;
+			$GLOBALS['TYPO3_CONF_VARS']['GFX']['imagick'] = 1;
 
 				// Get IM version and overwrite user settings
 			$ver = $this->getIMversion(TRUE);
-			$TYPO3_CONF_VARS['GFX']['im_version_5'] = $ver;
+			$GLOBALS['TYPO3_CONF_VARS']['GFX']['im_version_5'] = $ver;
 
 			if (($ver == 'im5') || ($ver == 'im6')) {
 				
-				$TYPO3_CONF_VARS['GFX']['im_no_effects'] = 0;
-				$TYPO3_CONF_VARS['GFX']['im_v5effects'] = 1;
+				$GLOBALS['TYPO3_CONF_VARS']['GFX']['im_no_effects'] = 0;
+				$GLOBALS['TYPO3_CONF_VARS']['GFX']['im_v5effects'] = 1;
 			}
 			else {
-				$TYPO3_CONF_VARS['GFX']['im_no_effects'] = 1;
-				$TYPO3_CONF_VARS['GFX']['im_v5effects'] = 0;
+				$GLOBALS['TYPO3_CONF_VARS']['GFX']['im_no_effects'] = 1;
+				$GLOBALS['TYPO3_CONF_VARS']['GFX']['im_v5effects'] = 0;
 			}
 			
 			if (TYPO3_DLOG) 
-				t3lib_div::devLog(__METHOD__, $this->extKey, 0, $TYPO3_CONF_VARS['GFX']);
+				t3lib_div::devLog(__METHOD__, $this->extKey, 0, $GLOBALS['TYPO3_CONF_VARS']['GFX']);
 		}
-		$this->gfxConf = $TYPO3_CONF_VARS['GFX'];
+		$this->gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
 
 		parent::init();
 	}
@@ -91,7 +91,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
      * @return	string/array	Version info
      *
      */
-	private function getIMversion($returnString = true) {
+	private function getIMversion($returnString = TRUE) {
 
 		if ($this->NO_IMAGICK) return '';
 
@@ -170,7 +170,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @return	array		[0]/[1] is w/h, [2] is file extension and [3] is the filename.
 	 * @see getImageScale(), typo3/show_item.php, fileList_ext::renderImage(), tslib_cObj::getImgResource(), SC_tslib_showpic::show(), maskImageOntoImage(), copyImageOntoImage(), scale()
 	 */
-	function imageMagickConvert($imagefile, $newExt = '', $w = '', $h = '', $params = '', $frame = '', $options = '', $mustCreate = 0)	{
+	public function imageMagickConvert($imagefile, $newExt = '', $w = '', $h = '', $params = '', $frame = '', $options = '', $mustCreate = 0)	{
 
 		if ($this->NO_IMAGICK)
 			return parent::imageMagickConvert($imagefile, $newExt, $w, $h, $params, $frame, $options, $mustCreate);
@@ -329,8 +329,8 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 
 		try {
 			$newIm = new Imagick($file);
-			// The $im->getImageGeometry() is faster than $im->identifyImage(false).
-			$idArr = $newIm->identifyImage(false);
+			// The $im->getImageGeometry() is faster than $im->identifyImage(FALSE).
+			$idArr = $newIm->identifyImage(FALSE);
 			
 			$arRes = array();
 			$arRes[0] = $idArr['geometry']['width'];
@@ -443,14 +443,52 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		return '';
 	}
 
+
+    /**
+     * Compresses given image.
+     *
+	 * @param	string		file name
+	 * @param	int		quality
+	 * @return	void
+     */
+	private function imagickCompress($imageFile, $imageQuality) {
 	
+		if ($this->NO_IMAGICK) return;
+
+		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
+		
+		if (!t3lib_div::isAbsPath($imageFile))
+			$file = t3lib_div::getFileAbsFileName($imageFile, FALSE);
+		else
+			$file = $imageFile;
+
+		try {
+
+			$im = new Imagick($file);
+
+			$im->optimizeImageLayers();
+			$this->imagickCompressObject($im, $imageQuality);
+			
+			$im->writeImage($file);
+			$im->destroy();
+		}
+		catch(ImagickException $e) {
+			
+			t3lib_div::sysLog(
+				__METHOD__ . ' >> ' . $e->getMessage(),
+				$this->extKey,
+				t3lib_div::SYSLOG_SEVERITY_ERROR);
+		}
+	} 
+
+
     /**
      * Compresses given image.
      *
 	 * @param	Imagick		Imagick object
 	 * @return	void
      */
-	private function imagickCompress(&$imageObj) {
+	private function imagickCompressObject(&$imageObj, $imageQuality = 0) {
 
 		if ($this->NO_IMAGICK) return;
 			
@@ -460,7 +498,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		switch($imgExt) {
 			
 			case 'gif':
-				if ($this->jpegQuality == 100)
+				if (($imageQuality == 100) || ($this->jpegQuality == 100))
 					$imageObj->setImageCompression(Imagick::COMPRESSION_RLE);
 				else
 					$imageObj->setImageCompression(Imagick::COMPRESSION_LZW);
@@ -468,30 +506,30 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			
 			case 'jpg':
 			case 'jpeg':
-				if ($this->jpegQuality == 100)
+				if (($imageQuality == 100) || ($this->jpegQuality == 100))
 					$imageObj->setImageCompression(Imagick::COMPRESSION_LOSSLESSJPEG);
 				else
 					$imageObj->setImageCompression(Imagick::COMPRESSION_JPEG);
-				$imageObj->setImageCompressionQuality($this->jpegQuality);
+				$imageObj->setImageCompressionQuality(($imageQuality == 0) ? $this->jpegQuality : $imageQuality);
 				break;
-			
+
 			case 'png':
 				$imageObj->setImageCompression(Imagick::COMPRESSION_ZIP);
-				$imageObj->setImageCompressionQuality($this->jpegQuality);
+				$imageObj->setImageCompressionQuality(($imageQuality == 0) ? $this->jpegQuality : $imageQuality);
 				break;
 			
 			case 'tif':
 			case 'tiff':
-				if ($this->jpegQuality == 100)
+				if (($imageQuality == 100) || ($this->jpegQuality == 100))
 					$imageObj->setImageCompression(Imagick::COMPRESSION_LOSSLESSJPEG);
 				else
 					$imageObj->setImageCompression(imagick::COMPRESSION_LZW);
-				$imageObj->setImageCompressionQuality($this->jpegQuality);
+				$imageObj->setImageCompressionQuality(($imageQuality == 0) ? $this->jpegQuality : $imageQuality);
 				break;
 
 			case 'tga':
 				$imageObj->setImageCompression(Imagick::COMPRESSION_RLE);
-				$imageObj->setImageCompressionQuality($this->jpegQuality);
+				$imageObj->setImageCompressionQuality(($imageQuality == 0) ? $this->jpegQuality : $imageQuality);
 				break;
 		}
 	}
@@ -560,11 +598,8 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 
 			$im = new Imagick($file);
 
-			$im->optimizeImageLayers();
-			
-			$this->imagickRemoveProfile($im);
-			$this->imagickOptimizeResolution($im);
-			$this->imagickCompress($im);
+			$im->optimizeImageLayers();			
+			$this->imagickOptimizeObject($im);
 
 			$im->writeImage($file);
 			$im->destroy();
@@ -586,7 +621,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		
 		$this->imagickRemoveProfile($imObject);
 		$this->imagickOptimizeResolution($imObject);
-		$this->imagickCompress($imObject);
+		$this->imagickCompressObject($imObject);
 	}
 
 	
@@ -635,7 +670,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @param	integer		Number of colors to reduce the image to.
 	 * @return	string		Reduced file
 	 */
-	function IMreduceColors($file, $cols) {
+	public function IMreduceColors($file, $cols) {
 
 		if ($this->NO_IMAGICK)
 			return parent::IMreduceColors($file, $cols);
@@ -673,15 +708,10 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 				}			
 				
 					// Reduce the amount of colors
-				$newIm->quantizeImage($reduce, Imagick::COLORSPACE_RGB, 0, false, false);
-					// Only save one pixel of each color
-				$newIm->uniqueImageColors();
+				$newIm->quantizeImage($reduce, Imagick::COLORSPACE_RGB, 0, FALSE, FALSE);
 				
 				$newIm->writeImage($fileResult);
 				$newIm->destroy();
-				
-					// Optimize image
-				$this->imagickOptimize($fileResult);
 
 				t3lib_div::fixPermissions($fileResult);
 				
@@ -705,7 +735,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @see tslib_gifBuilder::make(), applyImageMagickToPHPGif()
 	 */
 	 /*	 
-	function makeEffect(&$im, $conf) {
+	public function makeEffect(&$im, $conf) {
 
 		if ($this->NO_IMAGICK)
 			return parent::makeEffect(&$im, $conf);
@@ -731,13 +761,13 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @return	void
 	 */
 	 /*
-	function applyImageMagickToPHPGif(&$im, $command) {
+	public function applyImageMagickToPHPGif(&$im, $command) {
 		
 		if ($this->NO_IMAGICK)
 			return parent::applyImageMagickToPHPGif(&$im, $command);
 		
 		if (TYPO3_DLOG)
-			t3lib_div::devLog(__METHOD__, $this->extKey, -1, array($command));
+			t3lib_div::devLog(__METHOD__, $this->extKey, 0, array($command));
 
 		$tmpStr = $this->randomName();
 		$theFile = $tmpStr . '.' . $this->gifExtension;
@@ -768,7 +798,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @param	string		The ImageMagick parameters. Like effects, scaling etc.
 	 * @return	void
      */
-	function applyImagickEffect($file, $command) {
+	private function applyImagickEffect($file, $command) {
 
 		if ($this->NO_IMAGICK || $this->NO_IM_EFFECTS || !$this->V5_EFFECTS) return;
 		
@@ -776,7 +806,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 
 		$command = strtolower(trim($command));
 		$command = str_ireplace('-', '', $command);		
-		$elems = t3lib_div::trimExplode(' ', $command, true);
+		$elems = t3lib_div::trimExplode(' ', $command, TRUE);
 	
 		if (TYPO3_DLOG)
 			t3lib_div::devLog(__METHOD__, $this->extKey, 0, array($file, $elems));
@@ -835,11 +865,15 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 
 				/* compression */
 				case 'colors':
-					$this->IMreduceColors($file, intval($elems[1]));
+					$reduced = $this->IMreduceColors($file, intval($elems[1]));
+					if ($reduced) {
+						@copy($reduced, $file);
+						@unlink($reduced);
+					}
 					break;
 
 				case 'quality':
-					$this->IMreduceColors($file, intval($elems[1]));
+					$this->imagickCompress($file, intval($elems[1])); 
 					break;
 			}
 		}
@@ -860,11 +894,15 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			switch($elems[1]) {
 
 				case 'colors':
-					$this->IMreduceColors($file, intval($elems[2]));
+					$reduced = $this->IMreduceColors($file, intval($elems[2]));
+					if ($reduced) {
+						@copy($reduced, $file);
+						@unlink($reduced);
+					}
 					break;
 
 				case 'quality':
-					$this->IMreduceColors($file, intval($elems[2]));
+					$this->imagickCompress($file, intval($elems[2])); 
 					break;
 			}
 
@@ -910,11 +948,15 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			switch($elems[2]) {
 
 				case 'colors':
-					$this->IMreduceColors($file, intval($elems[3]));
+					$reduced = $this->IMreduceColors($file, intval($elems[3]));
+					if ($reduced) {
+						@copy($reduced, $file);
+						@unlink($reduced);
+					}
 					break;
 
 				case 'quality':
-					$this->IMreduceColors($file, intval($elems[3]));
+					$this->imagickCompress($file, intval($elems[3])); 
 					break;
 			}
 		}
@@ -933,7 +975,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			/* quality */
 			switch($elems[2]) {
 				case 'quality':
-					$this->IMreduceColors($file, intval($elems[3]));
+					$this->imagickCompress($file, intval($elems[3])); 
 					break;
 			}
 			
@@ -1374,7 +1416,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 			$newIm = new Imagick();
 			$newIm->readImage($fileResult);
 		
-			$newIm->quantizeImage($value, $newIm->getImageColorspace(), 0, false, false);
+			$newIm->quantizeImage($value, $newIm->getImageColorspace(), 0, FALSE, FALSE);
 				// Only save one pixel of each color
 			$newIm->uniqueImageColors();
 		
@@ -1419,7 +1461,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		}
 	}
 
-	private function imagickInvert($file, $value) {
+	private function imagickInvert($file) {
 	
 		if ($this->NO_IMAGICK) return;
 
@@ -1646,7 +1688,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 
 			$res = array(
 				'Basic image properties' => array(
-					'Image geometry: ' => $identify['geometry']['width'] . 'x' . $identify['geometry']['height'],
+					'Image dimensions: ' => $identify['geometry']['width'] . 'x' . $identify['geometry']['height'],
 					'Image format: ' => $identify['format'],
 					'Image type: ' => $identify['type'],
 					'Colorspace: ' => $identify['colorSpace'],
@@ -1748,7 +1790,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 		if ($this->NO_IMAGICK) return;
 
 		if (TYPO3_DLOG) 
-			t3lib_div::devLog(__METHOD__, $this->extKey, -1, array($fileIn, $fileOut, $w, $h));
+			t3lib_div::devLog(__METHOD__, $this->extKey, 0, array($fileIn, $fileOut, $w, $h));
 	
 		$bRes = FALSE;
 		$imgDPI = intval($this->gfxConf['imagesDPI']);

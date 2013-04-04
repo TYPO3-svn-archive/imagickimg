@@ -78,7 +78,7 @@ class ux_LocalPreviewHelper extends \TYPO3\CMS\Core\Resource\Processing\LocalPre
 		$temporaryFileName = Utility\GeneralUtility::tempnam('preview_') . $targetFileExtension;
 
 		if (TYPO3_DLOG)
-			Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, -1, array($originalFileName, $temporaryFileName, $configuration));
+			Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, 0, array($originalFileName, $temporaryFileName, $configuration));
 
 			// Check file extension
 		if ($targetFile->getOriginalFile()->getType() != Resource\File::FILETYPE_IMAGE &&

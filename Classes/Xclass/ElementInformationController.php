@@ -68,7 +68,7 @@ class ux_ElementInformationController extends \TYPO3\CMS\Backend\Controller\Cont
 					
 						foreach($g as $k => $v) {
 							$code .= '<tr><td class="t3-col-header" style="width: 170px;"><b>' . $k . '</b></td>';
-							$code .= '<td>' . htmlspecialchars(trim($v), ENT_QUOTES | ENT_IGNORE , 'UTF-8') . '&nbsp;</td></tr>';						
+							$code .= '<td>' . htmlspecialchars(trim($v), ENT_QUOTES | ENT_IGNORE, 'UTF-8') . '&nbsp;</td></tr>';						
 						}
 					}
 					$code .= '</table>';

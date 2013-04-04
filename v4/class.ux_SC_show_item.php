@@ -54,8 +54,8 @@ class ux_SC_show_item extends SC_show_item	{
 
 			// Setting header:
 		$fileName = t3lib_iconWorks::getSpriteIconForFile($ext) . '<strong>' . $GLOBALS['LANG']->sL('LLL:EXT:lang/locallang_core.xml:show_item.php.file', TRUE) . ':</strong> ' . $fI['file'];
-		if (t3lib_div::isFirstPartOfStr($this->file,PATH_site))	{
-			$code.= '<a href="../'.substr($this->file,strlen(PATH_site)).'" target="_blank">'.$fileName.'</a>';
+		if (t3lib_div::isFirstPartOfStr($this->file, PATH_site))	{
+			$code.= '<a href="../'.substr($this->file, strlen(PATH_site)).'" target="_blank">'.$fileName.'</a>';
 		} else {
 			$code.= $fileName;
 		}
@@ -83,7 +83,7 @@ class ux_SC_show_item extends SC_show_item	{
 					
 						foreach($g as $k => $v) {
 							$code .= '<tr><td nowrap="nowrap"><b>' . $k . '</b></td>';
-							$code .= '<td>' . htmlspecialchars(trim($v), ENT_QUOTES | ENT_IGNORE , 'UTF-8') . '&nbsp;</td></tr>';						
+							$code .= '<td>' . htmlspecialchars(trim($v), ENT_QUOTES | ENT_IGNORE, 'UTF-8') . '&nbsp;</td></tr>';						
 						}
 					}
 					$code .= '</table>';
@@ -92,14 +92,14 @@ class ux_SC_show_item extends SC_show_item	{
 			$code .= $this->doc->spacer(10);			
 			// Added code stop
 		}
-		$this->content.=$this->doc->section('',$code);
+		$this->content.=$this->doc->section('', $code);
 		$this->content.=$this->doc->divider(2);
 
 			// If the file was an image...:
 		if (is_array($imgInfo))	{
 
-			$imgInfo = $imgObj->imageMagickConvert($this->file,'web','520','390m','','','',1);
-			$imgInfo[3] = '../'.substr($imgInfo[3],strlen(PATH_site));
+			$imgInfo = $imgObj->imageMagickConvert($this->file, 'web', '520', '390m', '', '', '', 1);
+			$imgInfo[3] = '../'.substr($imgInfo[3], strlen(PATH_site));
 			$code = '<br />
 				<div align="center">'.$returnLinkTag.$imgObj->imgTag($imgInfo).'</a></div>';
 			$this->content.= $this->doc->section('', $code);
@@ -118,8 +118,8 @@ class ux_SC_show_item extends SC_show_item	{
 						next($t);
 						next($t);
 						next($t);
-						while(list(,$val)=each($t))	{
-							$parts = explode(' ',trim($val),7);
+						while(list(, $val)=each($t))	{
+							$parts = explode(' ', trim($val), 7);
 							$code.= '
 								'.$parts[6].'<br />';
 						}
@@ -129,7 +129,7 @@ class ux_SC_show_item extends SC_show_item	{
 							<br /><br />';
 					}
 					$this->content.= $this->doc->section('', $code);
-				} elseif($ext=='tar' || $ext=='tgz' || substr($lowerFilename,-6)=='tar.gz' || substr($lowerFilename,-5)=='tar.z')	{
+				} elseif($ext=='tar' || $ext=='tgz' || substr($lowerFilename, -6)=='tar.gz' || substr($lowerFilename, -5)=='tar.z')	{
 					$code = '';
 					if ($ext=='tar')	{
 						$compr = '';
@@ -153,10 +153,10 @@ class ux_SC_show_item extends SC_show_item	{
 							</span>
 							<br /><br />';
 					}
-					$this->content.= $this->doc->section('',$code);
+					$this->content.= $this->doc->section('', $code);
 				}
 			} elseif ($GLOBALS['TYPO3_CONF_VARS']['BE']['disable_exec_function']) {
-				$this->content.= $this->doc->section('',$GLOBALS['LANG']->sL('LLL:EXT:lang/locallang_core.xml:show_item.php.cannotDisplayArchive'));
+				$this->content.= $this->doc->section('', $GLOBALS['LANG']->sL('LLL:EXT:lang/locallang_core.xml:show_item.php.cannotDisplayArchive'));
 			}
 
 				// Font files:
@@ -168,13 +168,12 @@ class ux_SC_show_item extends SC_show_item	{
 				$url = $thumbScript.'?&dummy='.$GLOBALS['EXEC_TIME'].$params;
 				$thumb = '<br />
 					<div align="center">'.$returnLinkTag.'<img src="'.htmlspecialchars($url).'" border="0" title="'.htmlspecialchars(trim($this->file)).'" alt="" /></a></div>';
-				$this->content.= $this->doc->section('',$thumb);
+				$this->content.= $this->doc->section('', $thumb);
 			}
 		}
 
-
 			// References:
-		$this->content.= $this->doc->section($GLOBALS['LANG']->sL('LLL:EXT:lang/locallang_core.xml:show_item.php.referencesToThisItem'),$this->makeRef('_FILE',$this->file));
+		$this->content.= $this->doc->section($GLOBALS['LANG']->sL('LLL:EXT:lang/locallang_core.xml:show_item.php.referencesToThisItem'), $this->makeRef('_FILE', $this->file));
 	}
 
 }

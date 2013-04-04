@@ -42,7 +42,7 @@ class ux_ThumbnailView extends \TYPO3\CMS\Backend\View\ThumbnailView {
 		
 		$gfxConf = $GLOBALS['TYPO3_CONF_VARS']['GFX'];
 		if (TYPO3_DLOG)
-			\TYPO3\CMS\Core\Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, -1, array($this->image, $gfxConf));
+			\TYPO3\CMS\Core\Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, 0, array($this->image, $gfxConf));
 
 		// If file exists, we make a thumbnail of the file.
 		if (is_object($this->image)) {

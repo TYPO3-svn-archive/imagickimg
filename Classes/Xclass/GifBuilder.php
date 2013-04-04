@@ -335,7 +335,7 @@
 			return parent::imageMagickExec($input, $output, $params, $frame);
 
 		if (TYPO3_DLOG)
-			\TYPO3\CMS\Core\Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, -1, array($input, $output, $params, $frame));
+			\TYPO3\CMS\Core\Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, 0, array($input, $output, $params, $frame));
 			
 		// Unless noFramePrepended is set in the Install Tool, a frame number is added to
 		// select a specific page of the image (by default this will be the first page)
@@ -393,7 +393,7 @@
 			return parent::imageMagickIdentify($imagefile);
 
 		if (TYPO3_DLOG)
-			\TYPO3\CMS\Core\Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, -1, $arRes);
+			\TYPO3\CMS\Core\Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, 0, $arRes);
 		
 		// BE uses stdGraphics and absolute paths.
 		if (!\TYPO3\CMS\Core\Utility\GeneralUtility::isAbsPath($imagefile))
@@ -823,7 +823,7 @@
 	 * @return	void
 	 * @see tslib_gifBuilder::make(), applyImageMagickToPHPGif()
 	 */
-/*	function makeEffect(&$im, $conf) {
+/*	public function makeEffect(&$im, $conf) {
 
 		if ($this->NO_IMAGICK)
 			return parent::makeEffect(&$im, $conf);
@@ -845,7 +845,7 @@
 	 * @param	string		The ImageMagick parameters. Like effects, scaling etc.
 	 * @return	void
 	 */
-/*	function applyImageMagickToPHPGif(&$im, $command) {
+/*	public function applyImageMagickToPHPGif(&$im, $command) {
 		
 		if ($this->NO_IMAGICK)
 			return parent::applyImageMagickToPHPGif(&$im, $command);
@@ -1593,7 +1593,7 @@
 		}
 	}
 
-	private function imagickInvert($file, $value) {
+	private function imagickInvert($file) {
 	
 		if ($this->NO_IMAGICK) return;
 		

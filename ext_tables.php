@@ -1,5 +1,5 @@
 <?php
-if (!defined ("TYPO3_MODE")) 	die ("Access denied.");
+if (!defined ('TYPO3_MODE')) 	die ('Access denied.');
 
 // Get TYPO3 version
 if (function_exists('t3lib_utility_VersionNumber::convertVersionNumberToInteger')) {

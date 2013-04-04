@@ -823,7 +823,7 @@ class ux_GraphicalFunctions extends \TYPO3\CMS\Core\Imaging\GraphicalFunctions {
 	 * @return	void
 	 * @see tslib_gifBuilder::make(), applyImageMagickToPHPGif()
 	 */
-/*	function makeEffect(&$im, $conf) {
+/*	public function makeEffect(&$im, $conf) {
 
 		if ($this->NO_IMAGICK)
 			return parent::makeEffect(&$im, $conf);
@@ -845,7 +845,7 @@ class ux_GraphicalFunctions extends \TYPO3\CMS\Core\Imaging\GraphicalFunctions {
 	 * @param	string		The ImageMagick parameters. Like effects, scaling etc.
 	 * @return	void
 	 */
-/*	function applyImageMagickToPHPGif(&$im, $command) {
+/*	public function applyImageMagickToPHPGif(&$im, $command) {
 		
 		if ($this->NO_IMAGICK)
 			return parent::applyImageMagickToPHPGif(&$im, $command);
@@ -1593,7 +1593,7 @@ class ux_GraphicalFunctions extends \TYPO3\CMS\Core\Imaging\GraphicalFunctions {
 		}
 	}
 
-	private function imagickInvert($file, $value) {
+	private function imagickInvert($file) {
 	
 		if ($this->NO_IMAGICK) return;
 		
