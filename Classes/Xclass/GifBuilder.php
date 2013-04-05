@@ -96,7 +96,7 @@
      * @return	string/array	Version info
      *
      */
-	private function getIMversion($returnString = true) {
+	private function getIMversion($returnString = TRUE) {
 
 		if ($this->NO_IMAGICK) return '';
 
@@ -372,8 +372,7 @@
 				$this->extKey,
 				\TYPO3\CMS\Core\Utility\GeneralUtility::SYSLOG_SEVERITY_ERROR);
 		}
-		
-		
+
 		// Change the permissions of the file
 		\TYPO3\CMS\Core\Utility\GeneralUtility::fixPermissions($output);
 		return $ret;
@@ -404,7 +403,7 @@
 		try {
 			$newIm = new Imagick($file);
 			// The $im->getImageGeometry() is faster than $im->identifyImage(false).
-			$idArr = $newIm->identifyImage(false);
+			$idArr = $newIm->identifyImage(FALSE);
 			
 			$arRes = array();
 			$arRes[0] = $idArr['geometry']['width'];
@@ -890,7 +889,7 @@
 
 		$command = strtolower(trim($command));
 		$command = str_ireplace('-', '', $command);		
-		$elems = \TYPO3\CMS\Core\Utility\GeneralUtility::trimExplode(' ', $command, true);
+		$elems = \TYPO3\CMS\Core\Utility\GeneralUtility::trimExplode(' ', $command, TRUE);
 	
 		if (TYPO3_DLOG)
 			\TYPO3\CMS\Core\Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, 0, array($file, $elems));
@@ -1542,7 +1541,7 @@
 			$newIm = new Imagick();
 			$newIm->readImage($fileResult);
 		
-			$newIm->quantizeImage($value, $newIm->getImageColorspace(), 0, false, false);
+			$newIm->quantizeImage($value, $newIm->getImageColorspace(), 0, FALSE, FALSE);
 				// Only save one pixel of each color
 			$newIm->uniqueImageColors();
 		

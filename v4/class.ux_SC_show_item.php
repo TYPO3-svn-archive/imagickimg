@@ -32,7 +32,7 @@ class ux_SC_show_item extends SC_show_item	{
 	 * @param	string		<a> tag closing/returning.
 	 * @return	void
 	 */
-	function renderFileInfo($returnLinkTag)	{
+	public function renderFileInfo($returnLinkTag)	{
 
 		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 

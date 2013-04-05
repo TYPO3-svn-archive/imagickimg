@@ -372,8 +372,7 @@ class ux_GraphicalFunctions extends \TYPO3\CMS\Core\Imaging\GraphicalFunctions {
 				$this->extKey,
 				\TYPO3\CMS\Core\Utility\GeneralUtility::SYSLOG_SEVERITY_ERROR);
 		}
-		
-		
+
 		// Change the permissions of the file
 		\TYPO3\CMS\Core\Utility\GeneralUtility::fixPermissions($output);
 		return $ret;
@@ -404,7 +403,7 @@ class ux_GraphicalFunctions extends \TYPO3\CMS\Core\Imaging\GraphicalFunctions {
 		try {
 			$newIm = new Imagick($file);
 			// The $im->getImageGeometry() is faster than $im->identifyImage(false).
-			$idArr = $newIm->identifyImage(false);
+			$idArr = $newIm->identifyImage(FALSE);
 			
 			$arRes = array();
 			$arRes[0] = $idArr['geometry']['width'];
@@ -794,7 +793,7 @@ class ux_GraphicalFunctions extends \TYPO3\CMS\Core\Imaging\GraphicalFunctions {
 				}			
 				
 					// Reduce the amount of colors
-				$newIm->quantizeImage($reduce, Imagick::COLORSPACE_RGB, 0, false, false);
+				$newIm->quantizeImage($reduce, Imagick::COLORSPACE_RGB, 0, FALSE, FALSE);
 				
 				$newIm->writeImage($fileResult);
 				$newIm->destroy();
@@ -890,7 +889,7 @@ class ux_GraphicalFunctions extends \TYPO3\CMS\Core\Imaging\GraphicalFunctions {
 
 		$command = strtolower(trim($command));
 		$command = str_ireplace('-', '', $command);		
-		$elems = \TYPO3\CMS\Core\Utility\GeneralUtility::trimExplode(' ', $command, true);
+		$elems = \TYPO3\CMS\Core\Utility\GeneralUtility::trimExplode(' ', $command, TRUE);
 	
 		if (TYPO3_DLOG)
 			\TYPO3\CMS\Core\Utility\GeneralUtility::devLog(__METHOD__, $this->extKey, 0, array($file, $elems));
@@ -1542,7 +1541,7 @@ class ux_GraphicalFunctions extends \TYPO3\CMS\Core\Imaging\GraphicalFunctions {
 			$newIm = new Imagick();
 			$newIm->readImage($fileResult);
 		
-			$newIm->quantizeImage($value, $newIm->getImageColorspace(), 0, false, false);
+			$newIm->quantizeImage($value, $newIm->getImageColorspace(), 0, FALSE, FALSE);
 				// Only save one pixel of each color
 			$newIm->uniqueImageColors();
 		

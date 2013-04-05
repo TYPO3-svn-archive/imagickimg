@@ -39,7 +39,7 @@ class ux_SC_t3lib_thumbs extends SC_t3lib_thumbs {
 	 *
 	 * @return	void
 	 */
-	function main()	{
+	public function main()	{
 
 		if (TYPO3_DLOG) t3lib_div::devLog(__METHOD__, $this->extKey);
 	

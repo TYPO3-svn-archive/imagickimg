@@ -31,7 +31,7 @@
  */ 
 class ux_tslib_cObj extends tslib_cObj {
 
-	function start($data, $table = '') {
+	public function start($data, $table = '') {
 
 		parent::start($data, $table);
 

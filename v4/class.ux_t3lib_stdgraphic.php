@@ -313,7 +313,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @param	string		The relative (to PATH_site) image filepath
 	 * @return	array
 	 */	 
-	function imageMagickIdentify($imagefile) {
+	public function imageMagickIdentify($imagefile) {
 		
 		if ($this->NO_IMAGICK)
 			return parent::imageMagickIdentify($imagefile);
@@ -358,7 +358,7 @@ class ux_t3lib_stdGraphic extends t3lib_stdGraphic {
 	 * @param	[type]		$handleNegation: ...
 	 * @return	void
 	 */
-	function combineExec($input, $overlay, $mask, $output, $handleNegation = FALSE) {
+	public function combineExec($input, $overlay, $mask, $output, $handleNegation = FALSE) {
 		
 		if ($this->NO_IMAGICK)
 			return parent::combineExec($input, $overlay, $mask, $output, $handleNegation);

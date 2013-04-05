@@ -313,7 +313,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	 * @param	string		The relative (to PATH_site) image filepath
 	 * @return	array
 	 */	 
-	function imageMagickIdentify($imagefile) {
+	public function imageMagickIdentify($imagefile) {
 		
 		if ($this->NO_IMAGICK)
 			return parent::imageMagickIdentify($imagefile);
@@ -358,7 +358,7 @@ class ux_tslib_gifBuilder extends tslib_gifBuilder {
 	 * @param	[type]		$handleNegation: ...
 	 * @return	void
 	 */
-	function combineExec($input, $overlay, $mask, $output, $handleNegation = FALSE) {
+	public function combineExec($input, $overlay, $mask, $output, $handleNegation = FALSE) {
 		
 		if ($this->NO_IMAGICK)
 			return parent::combineExec($input, $overlay, $mask, $output, $handleNegation);
