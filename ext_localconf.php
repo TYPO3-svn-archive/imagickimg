@@ -10,13 +10,14 @@ $GLOBALS['TYPO3_CONF_VARS']['GFX']['gdlib'] = 0;
 $GLOBALS['TYPO3_CONF_VARS']['GFX']['thumbnails'] = 0;
 
 // Get TYPO3 version
-//if (function_exists('\TYPO3\CMS\Core\Utility\VersionNumberUtility::convertVersionNumberToInteger')) {
-//	$t3version = \TYPO3\CMS\Core\Utility\VersionNumberUtility::convertVersionNumberToInteger(TYPO3_version);
-//} else
-if (function_exists('t3lib_utility_VersionNumber::convertVersionNumberToInteger')) {
-	$t3version = t3lib_utility_VersionNumber::convertVersionNumberToInteger(TYPO3_version);
+if (class_exists('\TYPO3\CMS\Core\Utility\VersionNumberUtility')) {
+	$t3version = \TYPO3\CMS\Core\Utility\VersionNumberUtility::convertVersionNumberToInteger(TYPO3_version);
 } else {
-    $t3version = t3lib_div::int_from_ver(TYPO3_version);
+	if (class_exists('t3lib_utility_VersionNumber')) {
+		$t3version = t3lib_utility_VersionNumber::convertVersionNumberToInteger(TYPO3_version);
+	} else {
+		$t3version = t3lib_div::int_from_ver(TYPO3_version);
+	}
 }
 
 if ($t3version >= 6000000) {
@@ -52,7 +53,7 @@ if (extension_loaded('imagick')) {
 
 	// Imagick loaded, so turn on image processing
 	$GLOBALS['TYPO3_CONF_VARS']['GFX']['image_processing'] = 1;
-	$GLOBALS['TYPO3_CONF_VARS']['GFX']['im'] = 1;
+	$GLOBALS['TYPO3_CONF_VARS']['GFX']['im'] = 0;
 	$GLOBALS['TYPO3_CONF_VARS']['GFX']['imagick'] = 1;
 	$GLOBALS['TYPO3_CONF_VARS']['GFX']['im_path'] = ''; // Not necesary while using Imagick
 	$GLOBALS['TYPO3_CONF_VARS']['GFX']['im_path_lzw'] = ''; // Not necesary while using Imagick

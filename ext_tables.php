@@ -2,10 +2,14 @@
 if (!defined ('TYPO3_MODE')) 	die ('Access denied.');
 
 // Get TYPO3 version
-if (function_exists('t3lib_utility_VersionNumber::convertVersionNumberToInteger')) {
-	$t3version = t3lib_utility_VersionNumber::convertVersionNumberToInteger(TYPO3_version);
+if (class_exists('\TYPO3\CMS\Core\Utility\VersionNumberUtility')) {
+	$t3version = \TYPO3\CMS\Core\Utility\VersionNumberUtility::convertVersionNumberToInteger(TYPO3_version);
 } else {
-    $t3version = t3lib_div::int_from_ver(TYPO3_version);
+	if (class_exists('t3lib_utility_VersionNumber')) {
+		$t3version = t3lib_utility_VersionNumber::convertVersionNumberToInteger(TYPO3_version);
+	} else {
+		$t3version = t3lib_div::int_from_ver(TYPO3_version);
+	}
 }
 
 // load additional effects labels

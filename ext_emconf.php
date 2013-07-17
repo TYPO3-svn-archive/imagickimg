@@ -3,7 +3,7 @@
 /***************************************************************
  * Extension Manager/Repository config file for ext "imagickimg".
  *
- * Auto generated 07-03-2013 11:55
+ * Auto generated 26-04-2013 08:33
  *
  * Manual updates:
  * Only the data in the array - everything else is removed by next
@@ -32,16 +32,15 @@ $EM_CONF[$_EXTKEY] = array (
 	'author_company' => '',
 	'CGLcompliance' => NULL,
 	'CGLcompliance_note' => NULL,
-	'constraints' => 
-	array (
-		'depends' => array(
-			'typo3' => '4.5.0-6.0.99',
+	'constraints' => array (
+		'depends' => array (
+			'typo3' => '4.5.0-6.1.99',
 			'php' => '5.3.0-5.4.99',
 		),
-		'conflicts' => array(
+		'conflicts' => array (
 			'jb_gd_resize' => ''
 		),
-		'suggests' => array(
+		'suggests' => array (
 		),
 	),
 );

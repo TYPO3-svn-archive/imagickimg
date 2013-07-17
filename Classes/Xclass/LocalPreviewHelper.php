@@ -91,31 +91,24 @@ class ux_LocalPreviewHelper extends \TYPO3\CMS\Core\Resource\Processing\LocalPre
 				Utility\GeneralUtility::devLog(__METHOD__ . ' Create the temporary file', $this->extKey);
 		
 				// Create the temporary file
-			if ($GLOBALS['TYPO3_CONF_VARS']['GFX']['im']) {
-				/*$parameters = '-sample ' . $configuration['width'] . 'x' . $configuration['height'] . ' '
-					. $this->processor->wrapFileName($originalFileName) . '[0] ' . $this->processor->wrapFileName($temporaryFileName);
-				$cmd = Utility\GeneralUtility::imageMagickCommand('convert', $parameters) . ' 2>&1';
-				Utility\CommandUtility::exec($cmd);*/
-
+			if (TYPO3_DLOG)
+				Utility\GeneralUtility::devLog(__METHOD__ . ' executing GraphicalFunctions->imagickThumbnailImage', $this->extKey);
+			
+			$graphics = Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Core\\Imaging\\GraphicalFunctions');
+			$graphics->init();
+			$graphics->mayScaleUp = 0;
+			$graphics->imagickThumbnailImage(
+				$originalFileName,
+				$temporaryFileName,
+				$configuration['width'],
+				$configuration['height']
+			);
+			
+			if (!file_exists($temporaryFileName)) {
 				if (TYPO3_DLOG)
-					Utility\GeneralUtility::devLog(__METHOD__ . ' executing GraphicalFunctions->imagickThumbnailImage', $this->extKey);
-				
-				$graphics = Utility\GeneralUtility::makeInstance('TYPO3\\CMS\\Core\\Imaging\\GraphicalFunctions');
-				$graphics->init();
-				$graphics->mayScaleUp = 0;
-				$graphics->imagickThumbnailImage(
-					$originalFileName,
-					$temporaryFileName,
-					$configuration['width'],
-					$configuration['height']
-				);
-				
-				if (!file_exists($temporaryFileName)) {
-					if (TYPO3_DLOG)
-						Utility\GeneralUtility::devLog(__METHOD__ . ' file: ' . $temporaryFileName . ' doesn\'t exists', $this->extKey);
-						// Create a error gif
-					$this->processor->getTemporaryImageWithText($temporaryFileName, 'No thumb', 'generated!', $targetFile->getOriginalFile()->getName());
-				}
+					Utility\GeneralUtility::devLog(__METHOD__ . ' file: ' . $temporaryFileName . ' doesn\'t exists', $this->extKey);
+					// Create a error gif
+				$this->processor->getTemporaryImageWithText($temporaryFileName, 'No thumb', 'generated!', $targetFile->getOriginalFile()->getName());
 			}
 			
 		}
